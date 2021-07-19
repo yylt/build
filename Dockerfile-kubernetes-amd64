@@ -1,0 +1,4 @@
+FROM yylt/base-hyperkube-image:amd64
+
+# Copy the hyperkube binary
+COPY kubernetes/_output/local/bin/linux/arm64/hyperkube /hyperkube
