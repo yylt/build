@@ -9,18 +9,21 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
-  BRANCH: v1.16.6-es
+  BRANCH: v1.16.7-es
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
 
     - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.16
+        go-version: 1.16.6
       id: go
 
     - name: Check out repo code
@@ -36,12 +39,11 @@ jobs:
 
     - name: Build amd64
       run: |
+        export KUBE_GIT_COMMIT=""
+        export KUBE_GIT_VERSION=${{ env.BRANCH }}
+        export KUBE_BUILD_PLATFORMS=linux/amd64
         cd ${{ env.PROJECT }} 
-        KUBE_BUILD_PLATFORMS=linux/amd64 make WHAT=cmd/hyperkube
-        
-    - name: debug
-      run: |
-        find ${{ env.PROJECT }}/_output/local/bin -type f
+        make WHAT=cmd/hyperkube
 
     - name: build and push amd64 image
       uses: whoan/docker-build-with-cache-action@v5
@@ -49,13 +51,17 @@ jobs:
         username: yylt
         password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
         image_name: yylt/hyperkube-amd64
-        image_tag: ${{ env.BRANCH }}
+        image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
         dockerfile: Dockerfile-kubernetes-amd64
 
     - name: Build arm64
       run: |
+        sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
+        export KUBE_GIT_COMMIT=""
+        export KUBE_GIT_VERSION=${{ env.BRANCH }}
+        export KUBE_BUILD_PLATFORMS=linux/arm64
         cd ${{ env.PROJECT }} 
-        KUBE_BUILD_PLATFORMS=linux/arm64 make WHAT=cmd/hyperkube
+        make WHAT=cmd/hyperkube
     
     - name: build and push arm64 image
       uses: whoan/docker-build-with-cache-action@v5
@@ -63,5 +69,5 @@ jobs:
         username: yylt
         password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
         image_name: yylt/hyperkube-arm64
-        image_tag: ${{ env.BRANCH }}
+        image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
         dockerfile: Dockerfile-kubernetes-arm64
