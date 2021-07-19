@@ -1,4 +1,4 @@
-name: Go
+name: kubernetes
 
 on:
   push:
@@ -22,11 +22,6 @@ jobs:
       with:
         go-version: ^1.16
       id: go
-    - name: name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-      id: buildx
-      with:
-        install: true
 
     - name: Check out repo code
       uses: actions/checkout@v2
@@ -34,14 +29,20 @@ jobs:
     - name: Check out build code
       uses: actions/checkout@v2
       with:
-        repository: https://github.com/easystack/kubernetes
+        repository: easystack/kubernetes
         ref: ${{ env.BRANCH }}
-        token: ${{ secret.KPULL }}  
+        token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
     - name: Build amd64
-      run: make PROJECT=${{ env.PROJECT }} ARCH=amd64
-    
+      run: |
+        cd ${{ env.PROJECT }} 
+        KUBE_BUILD_PLATFORMS=linux/amd64 make WHAT=cmd/hyperkube
+        
+    - name: debug
+      run: |
+        find ${{ env.PROJECT }}/_output/local/bin -type f
+
     - name: build and push amd64 image
       uses: whoan/docker-build-with-cache-action@v5
       with:
@@ -52,7 +53,9 @@ jobs:
         dockerfile: Dockerfile-kubernetes-amd64
 
     - name: Build arm64
-      run:  make PROJECT=${{ env.PROJECT }} ARCH=arm64
+      run: |
+        cd ${{ env.PROJECT }} 
+        KUBE_BUILD_PLATFORMS=linux/arm64 make WHAT=cmd/hyperkube
     
     - name: build and push arm64 image
       uses: whoan/docker-build-with-cache-action@v5
