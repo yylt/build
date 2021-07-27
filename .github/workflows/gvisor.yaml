@@ -41,6 +41,11 @@ jobs:
         cd ${{ env.PROJECT }} 
         make release
 
-    - name: debug
-      run:
-        find . -type f
+    - name: build and push image
+      uses: whoan/docker-build-with-cache-action@v5
+      with:
+        username: "${{ secrets.DOCKER_HUB_USER }}"
+        password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+        image_name: gvisor
+        image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
+        dockerfile: Dockerfile-gvisor
