@@ -1,0 +1,3 @@
+FROM gcr.io/distroless/static:nonroot 
+
+COPY ./fc/tools/image-builder/rootfs.img /
