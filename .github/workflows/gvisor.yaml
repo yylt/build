@@ -1,4 +1,4 @@
-name: gvisor
+name: gvisor runsc
 
 on:
   push:
