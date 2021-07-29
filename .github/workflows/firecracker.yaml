@@ -1,4 +1,4 @@
-name: firecracker
+name: firecracker rootfs 
 
 on:
   push:
