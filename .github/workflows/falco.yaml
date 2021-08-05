@@ -1,9 +1,9 @@
 name: falco
 on:
   push:
-    branches: [ falco ]
+    branches: [ falco-src ]
   pull_request:
-    branches: [ falco ]
+    branches: [ falco-src ]
 
 env:
   GO111MODULE: on 
@@ -13,7 +13,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
     - name: Get current date
       id: date
@@ -47,7 +47,7 @@ jobs:
       run: |
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
-          --platform linux/arm64,linux/amd64 \
-          --output "type=image,push=true" \
+          --platform linux/arm64 \
+          --output "type=image,push=false" \
           --tag yylt/${{ env.PROJECT }}:${{ env.BRANCH }}-${{ steps.date.outputs.date }} \
-          --file ${{ Dockerfile }} ./
+          --file ${{ env.Dockerfile }} ./
