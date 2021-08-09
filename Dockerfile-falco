@@ -8,13 +8,13 @@ ENV MAKE_JOBS=4
 ENV FALCO_VERSION=0.29.1
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends  git cmake build-essential libncurses-dev pkg-config autoconf libtool libelf-dev -y && \
+    apt-get install --no-install-recommends ca-certificates curl git cmake build-essential libncurses-dev pkg-config autoconf libtool libelf-dev -y && \
     apt-get install --no-install-recommends  -y libssl-dev libc-ares-dev libprotobuf-dev protobuf-compiler libjq-dev libgrpc++-dev protobuf-compiler-grpc libcurl4-openssl-dev libyaml-cpp-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-COPY falco.tar.gz /tmp/
+
 RUN cd /tmp && \
-    tar xzf falco.tar.gz && \
+    curl -L https://github.com/falcosecurity/falco/archive/refs/tags/${FALCO_VERSION}.tar.gz | tar xz  && \
     cd falco-${FALCO_VERSION} && \
     mkdir -p "$BUILD_TYPE" && \
     cd "$BUILD_TYPE" && \
@@ -26,7 +26,7 @@ RUN cd /tmp && \
     -DBUILD_WARNINGS_AS_ERRORS="$BUILD_WARNINGS_AS_ERRORS" \
     -DFALCO_VERSION="$FALCO_VERSION" \
     -DDRAIOS_DEBUG_FLAGS="$DRAIOS_DEBUG_FLAGS" \
-    -DUSE_BUNDLED_DEPS=ON \
+    -DUSE_BUNDLED_DEPS=OFF \
     ".." && \
     sed -i 's/v1.2.1/v1.4.1/g' falcosecurity-libs-repo/falcosecurity-libs-prefix/src/falcosecurity-libs/cmake/modules/b64.cmake && \
     sed -i 's/d620e7caf3ed5f9c28d727fa799918ad3ef69c80975905646bb549a6019cdcbd/0fa93fb9c4fb72cac5a21533e6d611521e4326f42c19cc23f8ded814b0eca071/g' falcosecurity-libs-repo/falcosecurity-libs-prefix/src/falcosecurity-libs/cmake/modules/b64.cmake && \

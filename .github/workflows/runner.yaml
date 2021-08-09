@@ -1,9 +1,9 @@
 name: runner
 on:
   push:
-    branches: [ falco-src ]
+    branches: [ runner ]
   pull_request:
-    branches: [ falco-src ]
+    branches: [ runner ]
 
 env:
   GO111MODULE: on 
