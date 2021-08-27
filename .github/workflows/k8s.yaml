@@ -9,7 +9,8 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
-  BRANCH: v1.16.6-es2
+  BRANCH: overquota
+  GIT_VERSION: v1.16.6-es3
 
 jobs:
   build:
@@ -32,7 +33,7 @@ jobs:
     - name: Check out build code
       uses: actions/checkout@v2
       with:
-        repository: easystack/kubernetes
+        repository: yylt/kubernetes-1
         ref: ${{ env.BRANCH }}
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
@@ -40,34 +41,18 @@ jobs:
     - name: Build amd64
       run: |
         export KUBE_GIT_COMMIT=""
-        export KUBE_GIT_VERSION=${{ env.BRANCH }}
+        export KUBE_GIT_VERSION=${{ env.GIT_VERSION }}
         export KUBE_BUILD_PLATFORMS=linux/amd64
         cd ${{ env.PROJECT }} 
         make WHAT=cmd/hyperkube
 
-    - name: build and push amd64 image
-      uses: whoan/docker-build-with-cache-action@v5
-      with:
-        username: "${{ secrets.DOCKER_HUB_USER }}"
-        password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
-        image_name: yylt/hyperkube-amd64
-        image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
-        dockerfile: Dockerfile-kubernetes-amd64
 
     - name: Build arm64
       run: |
         sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
         export KUBE_GIT_COMMIT=""
-        export KUBE_GIT_VERSION=${{ env.BRANCH }}
+        export KUBE_GIT_VERSION=${{ env.GIT_VERSION }}
         export KUBE_BUILD_PLATFORMS=linux/arm64
         cd ${{ env.PROJECT }} 
         make WHAT=cmd/hyperkube
     
-    - name: build and push arm64 image
-      uses: whoan/docker-build-with-cache-action@v5
-      with:
-        username: "${{ secrets.DOCKER_HUB_USER }}"
-        password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
-        image_name: yylt/hyperkube-arm64
-        image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
-        dockerfile: Dockerfile-kubernetes-arm64
