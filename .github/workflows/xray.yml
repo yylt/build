@@ -1,0 +1,42 @@
+name: xray
+
+on:
+  push:
+    branches: [ xray ]
+  pull_request:
+    branches: [ xray ]
+
+env:
+  GO111MODULE: on 
+  FRP_BRANCH: v0.37.1
+  XRAY_BRANCH: v1.4.2
+  FRP_SERVER: frp1.freefrp.net:7000
+  FRP_TOKEN: freefrp.net
+  FRP_REMOTE_PORT: 42001
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+      id: go
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: install frpc and xray
+      run: |
+        go install github.com/xtls/xray-core/main@${{ env.XRAY_BRANCH }}
+        go install github.com/fatedier/frp/cmd/frpc@${{ env.FRP_BRANCH }}
+
+    - name: run frpc and xray
+      run: |
+        cp xray /tmp -a
+        frpc tcp -l 3000 --ue --uc -s ${{ env.FRP_SERVER }} -t ${{ env.FRP_TOKEN }} --tls_enable -u ga -r ${{ env.FRP_REMOTE_PORT }} &
+        main run -c xray/cc.json
+    
