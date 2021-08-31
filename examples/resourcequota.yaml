@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: pods-high
+  namespace: test
+spec:
+  hard:
+    cpu: "1000"
+    memory: 20Gi
+    capacity.storageclass.storage.k8s.io/requests.storage: "1000"
+    configmaps: "1000"
+    count/cronjobs.batch: "1000"
+    count/deployments.apps: "1000"
+    count/ingresses.extensions: "1000"
+    count/jobs.batch: "1000"
+    count/secrets: "1000"
+    count/statefulsets.apps: "1000"
+    persistentvolumeclaims: "1000"
+    pods: "1000"
+    requests.nvidia.com/gpu: "1000"
+    services: "1000"
+    services.loadbalancers: "1000"
+

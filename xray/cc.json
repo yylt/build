@@ -1,0 +1,45 @@
+{
+    "log": {
+        "loglevel": "warning"
+      },    
+    "outbounds": [
+      {
+        "tag": "free",
+        "protocol": "freedom"
+      }
+    ],
+    "inbounds": [
+      {
+        "port": 3000,
+        "tag": "vless",
+        "listen": "0.0.0.0",
+        "protocol": "vless",
+        "streamSettings": {
+          "network": "tcp",
+          "security": "xtls",
+          "xtlsSettings": {
+            "serverName": "yylt.github.io",
+            "alpn":["http/1.1"],
+            "certificates": [
+                {
+                  "certificateFile": "/tmp/xray/client.pem",
+                  "keyFile": "/tmp/xray/client-key.pem"
+                }
+              ]
+          }
+        },
+        "settings": {
+          "decryption": "none",
+          "clients": [
+            {
+              "level": 0,
+              "security": "none",
+              "flow": "xtls-rprx-direct",
+              "id": "b3e82297-eab7-0f26-d714-a2091305b910"
+            }
+          ]
+        }
+      }
+    ]
+  }
+  
