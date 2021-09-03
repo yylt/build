@@ -1,0 +1,17 @@
+# Build the manager binary
+FROM golang:1.15.14 as builder
+
+# Copy the Go Modules manifests
+COPY . /
+
+# Build
+RUN cd /kubernetes  && \
+    export KUBE_GIT_COMMIT="" && \
+    export KUBE_GIT_VERSION=${{ env.BRANCH }} && \
+    make WHAT=cmd/kube*
+
+FROM yylt/base-hyperkube-image:arm64
+WORKDIR /
+COPY --from=builder /kubernetes/_output/local/bin/linux/arm64/kube* .
+
+ENTRYPOINT ["/hyperkube"]
