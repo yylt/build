@@ -7,7 +7,7 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
-  BRANCH: v1.22.1
+  BRANCH: v1.18.20
 
 jobs:
   build:
@@ -41,7 +41,7 @@ jobs:
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
         export KUBE_BUILD_PLATFORMS=linux/amd64
         cd ${{ env.PROJECT }} 
-        make WHAT=cmd/kube*
+        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
 
     - name: build and push amd64 image
       uses: whoan/docker-build-with-cache-action@v5
@@ -59,7 +59,7 @@ jobs:
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
         export KUBE_BUILD_PLATFORMS=linux/arm64
         cd ${{ env.PROJECT }} 
-        make WHAT=cmd/kube*
+        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
     
     - name: build and push arm64 image
       uses: whoan/docker-build-with-cache-action@v5
