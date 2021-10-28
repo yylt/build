@@ -7,7 +7,7 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
-  BRANCH: v1.18.20
+  BRANCH: v1.20.11-es
 
 jobs:
   build:
