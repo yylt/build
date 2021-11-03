@@ -2,5 +2,4 @@ FROM yylt/base-hyperkube-image:amd64
 
 # Copy the hyperkube binary into root directory
 COPY ./kubernetes/_output/local/bin/linux/amd64/kube* /
-
-
+COPY ./kubernetes/_output/local/bin/linux/amd64/cloud* /
