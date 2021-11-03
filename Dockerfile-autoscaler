@@ -1,0 +1,23 @@
+# Build the manager binary
+FROM golang:1.16.5 as builder
+
+WORKDIR /workspace
+COPY . .
+
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+# RUN GOPROXY="https://goproxy.cn,direct" go mod download
+
+# Build
+RUN cd autoscaler/cluster-autoscaler && \
+    CGO_ENABLED=0 GO111MODULE=auto go build -mod=vendor . && \
+    cp cluster-autoscaler /
+
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /
+COPY --from=builder /cluster-autoscaler .
+USER nonroot:nonroot
+
+ENTRYPOINT ["/cluster-autoscaler"]
