@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: taints-all
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: taints
+  template:
+    metadata:
+      labels:
+        app: taints
+    spec:
+      containers:
+      - image: busybox:latest
+        command:
+        - sleep
+        - 10d
+        imagePullPolicy: IfNotPresent
+        name: test
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      tolerations:
+      - operator: "Exists"
