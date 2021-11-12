@@ -1,14 +1,14 @@
-name: e2e
+name: kube
 
 on:
   push:
-    branches: [ e2e ]
+    branches: [ kube ]
 
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
   BRANCH: v1.20.11-es
-  Dockerfile: Dockerfile-e2e
+  Dockerfile: Dockerfile-kube
 
 jobs:
   build:
@@ -58,5 +58,5 @@ jobs:
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
-          --tag yylt/e2e:${{ steps.date.outputs.date }} \
+          --tag yylt/kube:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./
