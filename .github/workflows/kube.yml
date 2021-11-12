@@ -1,10 +1,10 @@
-name: arm kubernetes
+name: kube
 
 on:
   push:
-    branches: [ buildx ]
+    branches: [ kube ]
   pull_request:
-    branches: [ buildx ]
+    branches: [ kube ]
 
 env:
   GO111MODULE: on 

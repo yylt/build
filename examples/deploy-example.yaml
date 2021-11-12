@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-subpath
+  namespace: openstack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tests
+  template:
+    metadata:
+      labels:
+        app: tests
+    spec:
+      containers:
+      - image: busybox:latest
+        command:
+        - sleep
+        - 1d
+        imagePullPolicy: IfNotPresent
+        name: test
