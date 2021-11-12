@@ -1,18 +1,14 @@
-# Build the manager binary
-FROM golang:1.15.14 as builder
+FROM docker.io/yylt/build:202111151020 as builder
 
-# Copy the Go Modules manifests
-COPY . /
+WORKDIR /root/go/src/k8s.io/kubernetes/
+
+COPY . .
+RUN make kubemark && \
+    bash hack/generate-bindata.sh && \
+    go test -c ./test/e2e
 
 
-# Build
-RUN cd /kubernetes  && \
-    export KUBE_GIT_COMMIT="" && \
-    export KUBE_GIT_VERSION=${{ env.BRANCH }} && \
-    make WHAT=cmd/kube*
-
-FROM yylt/base-hyperkube-image:arm64
+FROM busybox:latest
 WORKDIR /
-COPY --from=builder /kubernetes/_output/local/bin/linux/arm64/kube* .
-
-ENTRYPOINT ["/hyperkube"]
+COPY --from=builder /root/go/src/k8s.io/kubernetes/e2e.test /e2e.test
+COPY --from=builder /root/go/src/k8s.io/kubernetes/_output/bin/kubemark /kubemark

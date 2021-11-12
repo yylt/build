@@ -1,0 +1,14 @@
+FROM golang:1.15 as builder
+
+WORKDIR /go/src/k8s.io/kubernetes
+
+COPY . .
+RUN export KUBE_GIT_COMMIT="" && \
+    export KUBE_GIT_VERSION=${{ env.BRANCH }} && \
+    make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
+    
+
+FROM ubuntu:22.04
+WORKDIR /
+COPY --from=builder /kubernetes/_output/local/bin/kube* .
+COPY --from=builder /kubernetes/_output/local/bin/cloud* .
