@@ -3,6 +3,7 @@ WORKDIR /workspace
 COPY . .
 RUN CGO_ENABLED=0 GO111MODULE=on go build -a -o ./bin/injector ./main.go
 
+
 FROM alpine:3.9
 WORKDIR /
 COPY --from=builder /workspace/bin/injector /usr/local/bin/injector
