@@ -1,0 +1,6 @@
+FROM alpine:3.14.3
+
+WORKDIR /go
+
+RUN apk add --no-cache findutils tar bash make rsync go && \
+    export GOPATH=/go 
