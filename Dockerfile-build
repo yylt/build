@@ -1,0 +1,16 @@
+FROM alpine:3.14.3
+
+RUN apk add --no-cache findutils tar bash make rsync gcc openssl musl-dev go
+# RUN apk add --no-cache curl tar && \
+#     apkArch="$(apk --print-arch)"; \
+#     case "$apkArch" in \
+#         aarch64) ARCH='arm64' ;; \
+#         x86_64) ARCH='amd64' ;; \
+#     esac; \
+#     curl -L -O https://golang.org/dl/go1.15.15.linux-${ARCH}.tar.gz && \
+#     tar xf go1.15.15.linux-${ARCH}.tar.gz -C /usr/local/ && \
+#     rm -rf go1.15.15.linux-${ARCH}.tar.gz && \
+#     apk add --no-cache findutils tar bash make rsync ${PKG}
+
+# ENV GOROOT=/usr/local/go
+# ENV PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
