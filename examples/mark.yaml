@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hollow-node
+  namespace: kubemark
+  labels:
+      name: hollow-node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: hollow-node
+  template:
+    metadata:
+      labels:
+        name: hollow-node
+    spec:
+      containers:
+      - name: hollow-kubelet
+        image: docker.io/yylt/kube:202111151024
+        imagePullPolicy: Always
+        ports:
+        -   containerPort: 4194
+        -   containerPort: 10250
+        -   containerPort: 10255
+        env:
+        -   name: CONTENT_TYPE
+            valueFrom:
+                configMapKeyRef:
+                    name: node-configmap
+                    key: content.type
+        -   name: NODE_NAME
+            valueFrom:
+                fieldRef:
+                    fieldPath: metadata.name
+        command:
+        -   /bin/sh
+        -   -c
+        -   /kubemark --morph=kubelet --name=$(NODE_NAME) --kubeconfig=/kubeconfig/kubelet.kubeconfig
+        volumeMounts:
+        -   name: kubeconfig-volume
+            mountPath: /kubeconfig
+            readOnly: true
+        securityContext:
+            privileged: true
+      - name: hollow-proxy
+        image: docker.io/yylt/kube:202111151024
+        imagePullPolicy: Always
+        env:
+        -   name: CONTENT_TYPE
+            valueFrom:
+                configMapKeyRef:
+                    name: node-configmap
+                    key: content.type
+        -   name: NODE_NAME
+            valueFrom:
+                fieldRef:
+                    fieldPath: metadata.name
+        command:
+        -   /bin/sh
+        -   -c
+        -   /kubemark --morph=proxy --name=$(NODE_NAME) --use-real-proxier=false --kubeconfig=/kubeconfig/kubeproxy.kubeconfig
+        volumeMounts:
+        -   name: kubeconfig-volume
+            mountPath: /kubeconfig
+            readOnly: true
+      volumes:
+      -   name: kubeconfig-volume
+          secret:
+              secretName: kubeconfig
+      nodeSelector:
+          node.es.io/role: worker
