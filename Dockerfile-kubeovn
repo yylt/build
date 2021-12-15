@@ -1,0 +1,27 @@
+FROM golang:1.17 as builder
+
+WORKDIR /root/go/src/github.com/kubeovn/kube-ovn
+
+COPY . .
+RUN arch="$(uname -m)"; \
+    case "$arch" in \
+        aarch64) make build-go-arm ;; \
+        x86_64) make build-go ;; \
+    esac; 
+
+FROM kubeovn/kube-ovn-base:v1.9.0
+
+WORKDIR /kube-ovn
+COPY ./dist/images/*.sh ./
+COPY ./dist/images/01-kube-ovn.conflist ./
+COPY ./dist/images/logrotate/* /etc/logrotate.d/
+COPY ./dist/images/grace_stop_ovn_controller /usr/share/ovn/scripts/grace_stop_ovn_controller
+
+COPY --from=builder /root/go/src/github.com/kubeovn/kube-ovn/dist/images/kube-ovn ./kube-ovn
+COPY --from=builder /root/go/src/github.com/kubeovn/kube-ovn/dist/images/kube-ovn-cmd ./kube-ovn-cmd
+RUN ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-controller && \
+    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-daemon && \
+    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-monitor && \
+    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-pinger && \
+    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-speaker
+

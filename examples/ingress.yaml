@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: local-prom
+  namespace: openstack
+spec:
+  rules:
+  - host: prom.local
+    http:
+      paths:
+      - backend:
+          serviceName: prom-metrics-og
+          servicePort: 9090
+        path: /
