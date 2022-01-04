@@ -8,8 +8,9 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: github-runner
-  VERSION: 2.279.0
+  VERSION: 2.286.0
   Dockerfile: Dockerfile-runner
+  
 jobs:
   build:
     name: Build
@@ -49,5 +50,5 @@ jobs:
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=false" \
-          --tag yylt/${{ env.PROJECT }}:${{ env.VERSION }}-${{ steps.date.outputs.date }} \
+          --tag yylt/${{ env.PROJECT }}:${{ env.VERSION }} \
           --file ${{ env.Dockerfile }} ./
