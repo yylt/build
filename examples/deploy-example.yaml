@@ -1,7 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-data-0
+  namespace: openstack
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: general
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-subpath
+  name: test-ceph
   namespace: openstack
 spec:
   replicas: 1
@@ -18,5 +31,11 @@ spec:
         command:
         - sleep
         - 1d
-        imagePullPolicy: IfNotPresent
         name: test
+        volumeMounts:
+        - mountPath: /test
+          name: test-data
+      volumes:
+      - name: test-data
+        persistentVolumeClaim:
+          claimName: test-data-0

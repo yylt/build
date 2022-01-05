@@ -1,7 +1,7 @@
 FROM debian:buster
 
-ARG GH_ACTIONS_RUNNER_VERSION=2.279.0
-ARG PACKAGES="docker-ce-cli gnupg2 apt-transport-https ca-certificates software-properties-common pwgen git make curl wget zip libicu-dev build-essential libssl-dev"
+ARG GH_ACTIONS_RUNNER_VERSION=2.286.0
+ARG PACKAGES="docker-ce gnupg2 apt-transport-https ca-certificates software-properties-common pwgen git make curl wget zip libicu-dev build-essential libssl-dev"
 
 # install basic stuff
 RUN apt-get update \
@@ -28,5 +28,6 @@ RUN curl -o actions-runner-linux-${ARCH}.tar.gz -L https://github.com/actions/ru
     && rm -f actions-runner-linux-${ARCH}.tar.gz
 
 COPY start.sh /
+RUN chmod +x /start.ssh
 
 CMD /start.sh
