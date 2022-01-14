@@ -1,0 +1,42 @@
+name: kata
+
+on:
+  push:
+    branches: [ kata ]
+
+env:
+  GO111MODULE: on 
+  PROJECT: kata-containers
+  BRANCH: main
+
+jobs:
+  build:
+    name: Build
+    runs-on: [self-hosted,arm64]
+    steps:
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: aarch64-unknown-linux-musl
+        override: false
+
+    - name: Set up Go 1.16
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Check out build code
+      uses: actions/checkout@v2
+      with:
+        repository: easystack/kata-containers
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }}  
+        path: ${{ env.PROJECT }}
+
+    - name: Build image
+      run: |
+        cd ${{ env.PROJECT }}
+        make -f ../kata-image/kata-image.mk build-image containerd-shim-v2 ecr-runtime generate-config
