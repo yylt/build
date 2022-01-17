@@ -1,0 +1,10 @@
+FROM ubuntu:latest as builder
+
+COPY . . 
+RUN apt-get update &&  apt-get install -y make gcc g++  autoconf
+RUN ./autogen.sh && ./configure && make 
+
+FROM ubuntu:latest 
+WORKDIR /
+COPY --from=builder /edge .
+COPY --from=builder /supernode .
