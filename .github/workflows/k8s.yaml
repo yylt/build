@@ -7,12 +7,21 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
-  BRANCH: v1.20.11-es
+  BRANCH: v1.20.14-es
+  Dockerfile: Dockerfile-kubernetes
 
 jobs:
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+        - os: ubuntu-20.04
+          arch: amd64
+        - os: self-hosted
+          arch: arm64
+
     steps:
     - name: Get current date
       id: date
@@ -35,37 +44,18 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Build amd64
+    - name: Build 
       run: |
         export KUBE_GIT_COMMIT=""
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
-        export KUBE_BUILD_PLATFORMS=linux/amd64
         cd ${{ env.PROJECT }} 
-        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
+        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl 
 
-    - name: build and push amd64 image
+    - name: build and push image
       uses: whoan/docker-build-with-cache-action@v5
       with:
         username: "${{ secrets.DOCKER_HUB_USER }}"
         password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
-        image_name: yylt/hyperkube-amd64
+        image_name: yylt/hyperkube-${{ matrix.arch }}
         image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
-        dockerfile: Dockerfile-kubernetes-amd64
-
-    - name: Build arm64
-      run: |
-        sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
-        export KUBE_GIT_COMMIT=""
-        export KUBE_GIT_VERSION=${{ env.BRANCH }}
-        export KUBE_BUILD_PLATFORMS=linux/arm64
-        cd ${{ env.PROJECT }} 
-        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
-    
-    - name: build and push arm64 image
-      uses: whoan/docker-build-with-cache-action@v5
-      with:
-        username: "${{ secrets.DOCKER_HUB_USER }}"
-        password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
-        image_name: yylt/hyperkube-arm64
-        image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
-        dockerfile: Dockerfile-kubernetes-arm64
+        dockerfile: ${{ env.Dockerfile }}
