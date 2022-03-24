@@ -1,8 +1,9 @@
-FROM alpine:3.15.0
+FROM alpine:3.9
 
-RUN apk -U --no-cache add ca-certificates ceph-common \
+RUN apk --no-cache add ca-certificates  \
     e2fsprogs xfsprogs ebtables ethtool \
-    iptables ipset bash kmod socat util-linux  
+    iptables ipset bash kmod socat util-linux && \
+    apk --force-old-apk --no-cache add ceph-common --repository=http://dl-cdn.alpinelinux.org/alpine/v3.14/community --repository=http://dl-cdn.alpinelinux.org/alpine/v3.14/main
 
 # Copy the hyperkube binary
 COPY ./kubernetes/_output/local/bin/linux/*/kube* /

@@ -19,8 +19,8 @@ jobs:
         include:
         - os: ubuntu-20.04
           arch: amd64
-        - os: self-hosted
-          arch: arm64
+        # - os: self-hosted
+        #   arch: arm64
 
     steps:
     - name: Get current date
