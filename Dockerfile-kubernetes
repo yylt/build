@@ -1,10 +1,6 @@
-FROM alpine:3.9
+ARG TAG=amd64
+FROM yylt/base-hyperkube-image:${TAG}
 
-RUN apk --no-cache add ca-certificates  \
-    e2fsprogs xfsprogs ebtables ethtool \
-    iptables ipset bash kmod socat util-linux && \
-    apk --force-old-apk --no-cache add ceph-common --repository=http://dl-cdn.alpinelinux.org/alpine/v3.14/community --repository=http://dl-cdn.alpinelinux.org/alpine/v3.14/main
-
-# Copy the hyperkube binary
+# Copy the hyperkube binary into root directory
 COPY ./kubernetes/_output/local/bin/linux/*/kube* /
-# COPY ./kubernetes/_output/local/bin/linux/arm64/cloud* /
+
