@@ -2,13 +2,13 @@ name: kubernetes
 
 on:
   push:
-    branches: [ k8s ]
+    branches: [ kubernetes ]
 
 env:
   GO111MODULE: on 
   PROJECT: kubernetes
   BRANCH: v1.20.14-es
-  Dockerfile: Dockerfile-k8s
+  Dockerfile: Dockerfile-kubernetes
 
 jobs:
   build:
@@ -18,10 +18,9 @@ jobs:
       matrix:
         include:
         - os: ubuntu-20.04
-          arch: amd64
-        # - os: self-hosted
-        #   arch: arm64
-
+          archname: amd64
+        - os: ubuntu-20.04
+          archname: arm64
     steps:
     - name: Get current date
       id: date
@@ -44,18 +43,24 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Build 
+    - name: install arm tools
+      run: |
+        sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
+        
+    - name: Build binary
       run: |
         export KUBE_GIT_COMMIT=""
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
+        export KUBE_BUILD_PLATFORMS=linux/${{ matrix.archname }}
         cd ${{ env.PROJECT }} 
-        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl 
+        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl
 
-    - name: build and push image
+    - name: build and push ${{ matrix.archname }} image
       uses: whoan/docker-build-with-cache-action@v5
       with:
         username: "${{ secrets.DOCKER_HUB_USER }}"
         password: "${{ secrets.DOCKER_HUB_PASSWORD }}"
-        image_name: yylt/hyperkube-${{ matrix.arch }}
+        image_name: yylt/hyperkube-${{ matrix.archname }}
+        build_extra_args: '{"--build-arg": "TAG=${{ matrix.archname }}"}'
         image_tag: ${{ env.BRANCH }}-${{ steps.date.outputs.date }}
         dockerfile: ${{ env.Dockerfile }}
