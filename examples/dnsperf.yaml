@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-records-config
+  namespace: default
+data:
+  records.txt: |-
+    ovn-northd.openstack.svc.cluster.local A
+    ovn-ovsdb-nb.openstack.svc.cluster.local A
+    ovn-ovsdb-nb-discovery.openstack.svc.cluster.local A
+    ovn-ovsdb-nb-relay.openstack.svc.cluster.local A
+    ovn-ovsdb-sb.openstack.svc.cluster.local A
+    ovn-ovsdb-sb-discovery.openstack.svc.cluster.local A
+    ovn-ovsdb-sb-leader-relay.openstack.svc.cluster.local A
+    ovn-ovsdb-sb-relay.openstack.svc.cluster.local A
+    coaster-all.openstack.svc.cluster.local A
+    ceph-mon.ceph.svc.cluster.local A
+    ceph-operator.ceph.svc.cluster.local A
+    ceph-rgw.ceph.svc.cluster.local A
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: dnsperf
+  name: dnsperf-test
+  namespace: default
+spec:
+  minReadySeconds: 3
+  progressDeadlineSeconds: 30
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: dnsperf
+  template:
+    metadata:
+      labels:
+        app: dnsperf
+    spec:
+      hostNetwork: true
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/hostname: node-1
+      containers:
+      - args:
+        - dnsperf -l 180 -s 10.222.0.3 -Q 3000 -d /opt/records.txt
+        command:
+        - sh
+        - -c
+        image: docker.io/yylt/dnsperf:latest
+        imagePullPolicy: Always
+        name: dnsperf
+        volumeMounts:
+        - mountPath: /opt/
+          name: dns-records-volume
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: dns-records-config
+        name: dns-records-volume
