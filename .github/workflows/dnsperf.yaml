@@ -48,5 +48,5 @@ jobs:
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
-          --tag yylt/${{ env.PROJECT }}:latest \
+          --tag yylt/${{ env.PROJECT }}:2.9.0 \
           --file ./${{ env.Dockerfile }} ./

@@ -13,7 +13,7 @@ RUN apk add --no-cache                                                        \
         libxml2-dev                                                           \
         make                                                                  \
         nghttp2-dev                                                           \
-        openssl-dev
+        openssl-dev tcpdump
 
 WORKDIR /opt
 
