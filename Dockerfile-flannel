@@ -1,0 +1,17 @@
+FROM golang:1.16 as builder
+
+WORKDIR /workspace
+COPY . .
+
+# Build
+RUN make 'dist/flanneld'
+
+
+FROM alpine:3.6
+
+# iptables use < 1.6.2
+
+RUN apk add --no-cache iproute2 net-tools ca-certificates iptables strongswan 
+COPY --from=builder /workspace/dist/flanneld /opt/bin/flanneld
+
+ENTRYPOINT ["/opt/bin/flanneld"]

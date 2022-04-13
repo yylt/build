@@ -56,6 +56,10 @@ spec:
           name: dns-records-volume
           readOnly: true
       dnsPolicy: Default
+      dnsConfig:
+        options:
+        - name: single-request-reopen
+        - name: single-request
       restartPolicy: Always
       volumes:
       - configMap:
