@@ -2,5 +2,6 @@ ARG TAG=amd64
 FROM yylt/base-hyperkube-image:${TAG}
 
 # Copy the hyperkube binary into root directory
+
 COPY ./kubernetes/_output/local/bin/linux/*/kube* /
 
