@@ -1,5 +1,5 @@
 # build
-- build images in github action 
+- build images github action 
 
 # copy
 - move image into docker hub
