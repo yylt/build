@@ -1,12 +1,19 @@
-FROM alpine:3.15
+#FROM alpine:3.15
+#
+#RUN apk --no-cache add ca-certificates ceph-common  \
+#    e2fsprogs xfsprogs ebtables ethtool conntrack-tools \
+#    iptables ipset bash kmod socat util-linux ; \
+#    rm -rf /sbin/iptables /sbin/iptables-save /sbin/iptables-restore; \
+#    ln -s /sbin/xtables-nft-multi /sbin/iptables; \
+#    ln -s /sbin/xtables-nft-multi /sbin/iptables-save; \
+#    ln -s /sbin/xtables-nft-multi /sbin/iptables-restore
 
-RUN apk --no-cache add ca-certificates ceph-common  \
-    e2fsprogs xfsprogs ebtables ethtool conntrack-tools \
-    iptables ipset bash kmod socat util-linux ; \
-    rm -rf /sbin/iptables /sbin/iptables-save /sbin/iptables-restore; \
-    ln -s /sbin/xtables-nft-multi /sbin/iptables; \
-    ln -s /sbin/xtables-nft-multi /sbin/iptables-save; \
-    ln -s /sbin/xtables-nft-multi /sbin/iptables-restore
+FROM debian:bullseye-slim
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends  ca-certificates ceph-common  \
+    e2fsprogs xfsprogs ebtables ethtool conntrack \
+    iptables ipset bash kmod socat util-linux && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy the hyperkube binary
 COPY ./kubernetes/_output/local/bin/linux/*/kube* /
