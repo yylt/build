@@ -1,0 +1,17 @@
+FROM golang:alpine as builder
+
+COPY . /usr/src
+
+WORKDIR /usr/src
+RUN apk add --no-cache --virtual build-dependencies build-base=~0.5 && \
+    cd sriov-cni && \
+    make clean && \
+    make build && \
+    cd ../ib-sriov-cni && \
+    make clean && \
+    make build
+
+FROM alpine:3
+COPY --from=builder /usr/src/sriov-cni/build/sriov /
+COPY --from=builder /usr/src/ib-sriov-cni/build/ib-sriov /
+WORKDIR /
