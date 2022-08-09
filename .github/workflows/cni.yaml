@@ -8,19 +8,14 @@ env:
   PROJECT: kubernetes
   BRANCH: v0.0.1
   Dockerfile: Dockerfile-cni
+  Push: 'true'
+  PushImages: registry.yylt.tk:8443/captain/sriov-cni:v0.0.1,registry.yylt.tk:8443/arm64v8/sriov-cni:v0.0.1
+  PushArch: linux/amd64,linux/arm64
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-        - os: ubuntu-20.04
-          arch: amd64
-        # - os: self-hosted
-        #   arch: arm64
-
+    name: Build
+    runs-on: ubuntu-latest
     steps:
     - name: Get current date
       id: date
@@ -29,53 +24,63 @@ jobs:
     - name: Check out repo code
       uses: actions/checkout@v2
 
-    - name: Check out build code openshift/ib-sriov-cni
-      uses: actions/checkout@v2
-      with:
-        repository: openshift/ib-sriov-cni
-        ref: master
-        path: ib-sriov-cni
+    # - name: Check out build code openshift/ib-sriov-cni
+    #   uses: actions/checkout@v2
+    #   with:
+    #     repository: openshift/ib-sriov-cni
+    #     ref: master
+    #     path: ib-sriov-cni
 
-    - name: Check out build code openshift/sriov-cni
-      uses: actions/checkout@v2
-      with:
-        repository: openshift/sriov-cni
-        ref: master
-        path: sriov-cni
+    # - name: Check out build code openshift/sriov-cni
+    #   uses: actions/checkout@v2
+    #   with:
+    #     repository: openshift/sriov-cni
+    #     ref: master
+    #     path: sriov-cni
 
-    - name: Check out build code k8snetworkplumbingwg/whereabouts
-      uses: actions/checkout@v2
-      with:
-        repository: k8snetworkplumbingwg/whereabouts
-        ref: master
-        path: whereabouts
+    # - name: Check out build code k8snetworkplumbingwg/whereabouts
+    #   uses: actions/checkout@v2
+    #   with:
+    #     repository: k8snetworkplumbingwg/whereabouts
+    #     ref: master
+    #     path: whereabouts
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
+    # - name: Set up QEMU
+    #   uses: docker/setup-qemu-action@v1
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+    # - name: Set up Docker Buildx
+    #   uses: docker/setup-buildx-action@v1
 
-    - name: Cache Docker layers
-      uses: actions/cache@v2
-      id: cache
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
+    # - name: Cache Docker layers
+    #   uses: actions/cache@v2
+    #   id: cache
+    #   with:
+    #     path: /tmp/.buildx-cache
+    #     key: ${{ runner.os }}-buildx-${{ github.sha }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-buildx-
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKER_HUB_USER }}
-        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    # - name: Login to DockerHub
+    #   uses: docker/login-action@v1
+    #   with:
+    #     username: ${{ secrets.DOCKER_HUB_USER }}
+    #     password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-    - name: Docker Buildx (push)
+    # - name: Docker Buildx (push)
+    #   run: |
+    #     docker buildx build \
+    #       --cache-from "type=local,src=/tmp/.buildx-cache" \
+    #       --platform linux/arm64,linux/amd64 \
+    #       --output "type=image,push=true" \
+    #       --tag yylt/cni:${{ steps.date.outputs.date }} \
+    #       --file ./${{ env.Dockerfile }} ./
+
+    - name: Set up containerd
+      uses: crazy-max/ghaction-setup-containerd@v2
+
+    - name: Push Image by ctr 
+      if:  ${{ env.Push == 'true' }}
       run: |
-        docker buildx build \
-          --cache-from "type=local,src=/tmp/.buildx-cache" \
-          --platform linux/arm64,linux/amd64 \
-          --output "type=image,push=true" \
-          --tag yylt/cni:${{ steps.date.outputs.date }} \
-          --file ./${{ env.Dockerfile }} ./
+        sudo ls ./ -lht
+        sudo ls ./scripts -lht
+        sudo ./scripts/pushctr.sh  -i docker.io/yylt/cni:202208090353 -u ${{ secrets.HUBLOGIN }} -o ${{ env.PushImages }} -r ${{ env.PushArch }}
