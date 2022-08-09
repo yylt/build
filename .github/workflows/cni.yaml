@@ -8,19 +8,14 @@ env:
   PROJECT: kubernetes
   BRANCH: v0.0.1
   Dockerfile: Dockerfile-cni
+  Push: 'false'
+  PushImages: registry.yylt.tk:8443/captain/sriov-cni:v0.0.1
+  PushArch: linux/amd64
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-        - os: ubuntu-20.04
-          arch: amd64
-        # - os: self-hosted
-        #   arch: arm64
-
+    name: Build
+    runs-on: ubuntu-latest
     steps:
     - name: Get current date
       id: date
@@ -76,6 +71,15 @@ jobs:
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
-          --output "type=image,push=true" \
+          --output "type=image,push=false" \
           --tag yylt/cni:${{ steps.date.outputs.date }} \
           --file ./${{ env.Dockerfile }} ./
+
+    - name: Set up containerd
+      if:  ${{ env.Push == 'true' }}
+      uses: crazy-max/ghaction-setup-containerd@v2
+
+    - name: Push Image by ctr 
+      if:  ${{ env.Push == 'true' }}
+      run: |
+        sudo ./scripts/pushctr.sh  -i yylt/cni:${{ steps.date.outputs.date }} -u ${{ secrets.HUBLOGIN }} -o ${{ env.PushImages }} -r ${{ env.PushArch }}
