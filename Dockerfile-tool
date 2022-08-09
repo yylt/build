@@ -1,0 +1,11 @@
+
+FROM golang:1.19 as builder
+WORKDIR /workspace
+COPY . .
+RUN cd containerd && make bin/ctr 
+
+
+FROM debian:sid-slim
+
+COPY --from=builder /workspace/containerd/bin/ctr /usr/bin/
+

@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 ERRUSE=-1
 Addr="/run/containerd/containerd.sock"
@@ -88,7 +87,7 @@ trap 'delete' EXIT
 function delete()
 {
     for i in "${!Images[@]}"; do
-		echo "add image tag $img"
+		echo "delete image tag ${Images[$i]}"
         $CTR i rm ${Images[$i]}
     done
 }
