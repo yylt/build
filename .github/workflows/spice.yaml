@@ -1,0 +1,58 @@
+name: spice
+
+on:
+  push:
+    branches: [ spice ]
+
+env:
+  PROJECT: spice
+  BRANCH: v0.0.1
+  Dockerfile: Dockerfile-spice
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Check out spice-html5
+      run: |
+        curl -fsSL https://gitlab.freedesktop.org/spice/spice-html5/-/archive/master/spice-html5-master.tar.gz | tar xzf -
+        mv spice-html5-master spice-html5
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2  
+      id: cache
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.GHCR_PASSWORD }}
+
+    - name: Docker Buildx (push)
+      run: |
+        docker buildx build \
+          --cache-from "type=local,src=/tmp/.buildx-cache" \
+          --platform linux/arm64,linux/amd64 \
+          --output "type=image,push=true" \
+          --tag ghcr.io/yylt/spice:${{ steps.date.outputs.date }} \
+          --file ./${{ env.Dockerfile }} ./
