@@ -3,7 +3,7 @@
 ERRUSE=-1
 Addr="/run/containerd/containerd.sock"
 Image=""
-Ouputs=""
+Outputs=""
 Archs=""
 UserPw=""
 function usage()
@@ -94,7 +94,7 @@ function delete()
 
 function main()
 {
-	$CTR i pull --all-platforms $Image
+	$CTR i pull -k --all-platforms $Image
 	for i in "${!Images[@]}"; do
 		echo "add image tag $img"
         $CTR i tag $Image ${Images[$i]}

@@ -6,12 +6,13 @@ RUN cd sriov-cni && make build && \
     cd ../ib-sriov-cni && make build && \
     cd ../whereabouts && make build
 
-
 FROM alpine:3
 
-RUN apk -U --no-cache add bash ; 
 COPY --from=builder /workspace/ib-sriov-cni/build/ib-sriov / 
 COPY --from=builder /workspace/sriov-cni/build/sriov / 
 COPY --from=builder /workspace/whereabouts/bin/whereabouts / 
 COPY --from=builder /workspace/whereabouts/bin/ip-control-loop /
+COPY --from=builder /workspace/whereabouts/script/install-cni.sh /
+COPY --from=builder /workspace/scripts/entrypoint.sh / 
 
+ENTRYPOINT ["/entrypoint.sh"]
