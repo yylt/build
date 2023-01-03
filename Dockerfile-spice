@@ -1,0 +1,14 @@
+FROM golang:1.18 as builder
+
+RUN go install github.com/caddyserver/caddy/v2/cmd/caddy@v2.5.2
+
+FROM debian:stable-slim
+COPY --from=builder /go/bin/caddy /
+COPY ./spice-html5 /
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends websockify && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# apk -U --no-cache add websockify
+WORKDIR /
