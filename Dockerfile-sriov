@@ -1,17 +1,22 @@
-FROM golang:alpine as builder
+FROM golang:1.19 as builder
 
 COPY . /usr/src
 
 WORKDIR /usr/src
-RUN apk add --no-cache --virtual build-dependencies build-base=~0.5 && \
-    cd sriov-cni && \
-    make clean && \
+RUN cd sriovdp && \
     make build && \
-    cd ../ib-sriov-cni && \
-    make clean && \
-    make build
+    cd ../sriovop && \
+    make _build-manager BIN_PATH=build/_output/cmd && \
+    make _build-sriov-network-config-daemon BIN_PATH=build/_output/cmd && \
+    make _build-webhook BIN_PATH=build/_output/cmd
 
-FROM alpine:3
-COPY --from=builder /usr/src/sriov-cni/build/sriov /
-COPY --from=builder /usr/src/ib-sriov-cni/build/ib-sriov /
-WORKDIR /
+
+FROM quay.io/centos/centos:stream8
+RUN yum -y install hwdata mstflint && yum clean all
+COPY --from=builder /usr/src/sriovdp/build/sriovdp /usr/bin/
+COPY --from=builder /usr/src/sriovop/build/_output/cmd/manager /usr/bin/
+COPY --from=builder /usr/src/sriovop/build/_output/cmd/webhook /usr/bin/
+COPY --from=builder /usr/src/sriovop/build/_output/cmd/sriov-network-config-daemon /usr/bin/
+COPY --from=builder /usr/src/sriovop/bindata /bindata
+
+

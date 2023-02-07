@@ -7,11 +7,11 @@ on:
 
 env:
   GO111MODULE: on 
-  REPO1: k8snetworkplumbingwg/sriov-cni
-  PROJECT1: sriov-cni
-  BRANCH1: v2.6.3
-  REPO2: openshift/ib-sriov-cni
-  PROJECT2: ib-sriov-cni
+  REPO1: openshift/sriov-network-device-plugin
+  PROJECT1: sriovdp
+  BRANCH1: master
+  REPO2: yylt/sriov-network-operator
+  PROJECT2: sriovop
   BRANCH2: master
   Dockerfile: Dockerfile-sriov
 
@@ -68,6 +68,6 @@ jobs:
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
-          --tag yylt/sriov-cni:${{ steps.date.outputs.date }} \
+          --tag yylt/sriov:${{ steps.date.outputs.date }} \
           --file ${{ env.Dockerfile }} ./
 
