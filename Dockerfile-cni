@@ -7,12 +7,17 @@ RUN cd sriov-cni && make build && \
     cd ../whereabouts && make build
 
 FROM alpine:3
-
+RUN apkArch="$(apk --print-arch)"; \
+    case "$apkArch" in \
+        aarch64) ARCH='arm64' ;; \
+        x86_64) ARCH='amd64' ;; \
+    esac; \
+    wget -P / https://github.com/containernetworking/plugins/releases/download/v1.2.0/cni-plugins-linux-$ARCH-v1.2.0.tgz
 COPY --from=builder /workspace/ib-sriov-cni/build/ib-sriov / 
 COPY --from=builder /workspace/sriov-cni/build/sriov / 
 COPY --from=builder /workspace/whereabouts/bin/whereabouts / 
 COPY --from=builder /workspace/whereabouts/bin/ip-control-loop /
-COPY --from=builder /workspace/whereabouts/script/install-cni.sh /
 COPY --from=builder /workspace/scripts/entrypoint.sh / 
+COPY --from=builder /workspace/scripts/install.sh /
 
 ENTRYPOINT ["/entrypoint.sh"]
