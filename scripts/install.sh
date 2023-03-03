@@ -13,7 +13,7 @@ set -u -e
 CNI_BIN_DIR=${CNI_BIN_DIR:-"/host/opt/cni/bin/"}
 WHEREABOUTS_KUBECONFIG_FILE_HOST=${WHEREABOUTS_KUBECONFIG_FILE_HOST:-"/etc/cni/net.d/whereabouts.d/whereabouts.kubeconfig"}
 CNI_CONF_DIR=${CNI_CONF_DIR:-"/host/etc/cni/net.d"}
-SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-false}
+SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-true}
 
 INSTALL_CONFIG=${INSTALL_CONFIG:-"true"}
 SLEEP_LOOP=${SLEEP_LOOP:-"true"}
@@ -35,7 +35,7 @@ SERVICEACCOUNT_TOKEN=$(cat $SERVICE_ACCOUNT_PATH/token)
 
 function log()
 {
-    echo "$(date --iso-8601=seconds) ${1}"
+    echo "$(date) ${1}"
 }
 
 function error()
@@ -54,6 +54,7 @@ function installconfig()
         warn "not install whereabouts config"
         return
     fi
+     log "start install whereabouts configuring."
 # Check if we're running as a k8s pod.
 if [ -f "$SERVICE_ACCOUNT_PATH/token" ]; then
   # We're running as a k8d pod - expect some variables.
@@ -125,15 +126,15 @@ fi
 function installcni()
 {
     if [ "$INSTALL_CNI" == "true"  ]; then
-        echo "install cni plugins to dir: $CNI_BIN_DIR"
-        find /cni-plugins*tgz -exec tar xvfpz {} -C $CNI_BIN_DIR/
+        log "install cni plugins to dir: $CNI_BIN_DIR"
+        find /cni-plugins*tgz -exec tar xvfpz {} -C $CNI_BIN_DIR/ \;
     fi 
 }
 
 function whereaboutsloop()
 {
     while [ "$WHEREABOUTS_LOOP" == "true"  ]; do
-        echo "execute whereabouts controller loop"
+        log "execute whereabouts controller loop"
         /ip-control-loop
     done   
 }
@@ -141,7 +142,7 @@ function whereaboutsloop()
 function sleeploop()
 {
     while [ "$SLEEP_LOOP" == "true"  ]; do
-        echo "Done configuring CNI.  Sleep=$should_sleep"
+        log "Done configuring CNI.  Sleep=$should_sleep"
         sleep 1000000000000
     done
 }
