@@ -1,0 +1,66 @@
+name: istio
+
+on:
+  push:
+    branches: [ istio ]
+
+env:
+  PROJECT: istio
+  BRANCH: 1.16.3
+  Dockerfile: Dockerfile-istio
+
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Check out build code
+      uses: actions/checkout@v2
+      with:
+        repository: istio/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        path: ${{ env.PROJECT }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1.5.1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      id: cache
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx
+
+    - name: build istio binary
+      run: |
+        cd ${{ env.PROJECT }}
+        TARGET_ARCH=amd64 make build
+        TARGET_ARCH=arm64 make build
+        find . -name "*envoy"
+
+    # - name: Docker Buildx istio (push)
+    #   run: |
+    #     cd ${{ env.PROJECT }}
+    #     docker buildx build \
+    #       --cache-from "type=local,src=/tmp/.buildx-cache" \
+    #       --platform linux/arm64,linux/amd64 \
+    #       --output "type=image,push=true" \
+    #       --tag yylt/${{ env.PROJECT }}:3.0 \
+    #       --file ../${{ env.Dockerfile }} ./
