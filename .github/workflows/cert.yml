@@ -1,0 +1,76 @@
+name: cert
+on:
+  push:
+    branches: [ cert ]
+
+
+env:
+  GO111MODULE: on 
+  REPO1: cert-manager/cert-manager
+  PROJECT1: cert
+  BRANCH1: v1.10.2
+  REPO2: cert-manager/istio-csr
+  PROJECT2: istio-csr
+  BRANCH2: v0.6.0
+  Dockerfile: Dockerfile-cert
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1.5.1
+
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '^1.20'
+
+    - name: Check out build code1
+      uses: actions/checkout@v2
+      with:
+        repository: ${{ env.REPO1 }}
+        ref: ${{ env.BRANCH1 }}
+        path: ${{ env.PROJECT1 }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      id: cache
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    
+    - name: Build cert-manager
+      run: |
+        cd cert
+        make webhook
+        make cainjector
+        make controller
+
+    - name: Docker Buildx (push)
+      run: |
+        docker buildx build \
+          --cache-from "type=local,src=/tmp/.buildx-cache" \
+          --platform linux/arm64,linux/amd64 \
+          --output "type=image,push=false" \
+          --tag yylt/cert:${{ steps.date.outputs.date }} \
+          --file ${{ env.Dockerfile }} ./
+

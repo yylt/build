@@ -1,0 +1,12 @@
+FROM busybox
+
+RUN arch="$(uname -m)"; \
+    case "$arch" in \
+        aarch64) export ARCH=amd64 ;; \
+        x86_64) export ARCH=arm64 ;; \
+    esac; 
+
+COPY ./_bin/server/controller-linux-${ARCH} /usr/bin/controller
+COPY ./_bin/server/cainjector-linux-${ARCH} /usr/bin/cainjector
+COPY ./_bin/server/webhook-linux-${ARCH} /usr/bin/controller
+
