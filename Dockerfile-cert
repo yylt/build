@@ -1,0 +1,21 @@
+FROM docker.io/library/golang:1.20 as builder
+
+WORKDIR /workspace
+# Copy the Go Modules manifests
+COPY . .
+
+# Build
+RUN commit=$(git rev-parse HEAD) ; \
+    version=$(git describe --tags --match='v*' --abbrev=14); \
+    mkdir -p _bin && \
+    CGO_ENABLED=0 go build -o _bin/webhook -trimpath -ldflags '-w -s -X github.com/cert-manager/cert-manager/pkg/util.AppVersion=${version} -X github.com/cert-manager/cert-manager/pkg/util.AppGitCommit=${commit}' cmd/webhook/main.go && \
+    CGO_ENABLED=0 go build -o _bin/cainjector -trimpath -ldflags '-w -s -X github.com/cert-manager/cert-manager/pkg/util.AppVersion=${version} -X github.com/cert-manager/cert-manager/pkg/util.AppGitCommit=${commit}' cmd/cainjector/main.go && \
+    CGO_ENABLED=0 go build -o _bin/controller -trimpath -ldflags '-w -s -X github.com/cert-manager/cert-manager/pkg/util.AppVersion=${version} -X github.com/cert-manager/cert-manager/pkg/util.AppGitCommit=${commit}' cmd/controller/main.go 
+
+# Use distroless as minimal base image to package the manager binary
+FROM busybox
+WORKDIR /
+
+COPY --from=builder /workspace/_bin/webhook /usr/bin/webhook
+COPY --from=builder /workspace/_bin/cainjector /usr/bin/cainjector
+COPY --from=builder /workspace/_bin/controller /usr/bin/controller
