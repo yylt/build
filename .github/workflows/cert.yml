@@ -57,20 +57,15 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USER }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-    
-    - name: Build cert-manager
-      run: |
-        cd cert
-        make webhook
-        make cainjector
-        make controller
+   
 
     - name: Docker Buildx (push)
       run: |
+        cd cert
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
-          --output "type=image,push=false" \
-          --tag yylt/cert:${{ steps.date.outputs.date }} \
-          --file ${{ env.Dockerfile }} ./
+          --output "type=image,push=true" \
+          --tag yylt/cert-manager:${{ steps.date.outputs.date }} \
+          --file ../${{ env.Dockerfile }} ./
 
