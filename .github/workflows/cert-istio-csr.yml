@@ -1,7 +1,7 @@
-name: cert
+name: istio-csr
 on:
   push:
-    branches: [ cert ]
+    branches: [ istio-csr ]
 
 
 env:
@@ -12,7 +12,7 @@ env:
   REPO2: cert-manager/istio-csr
   PROJECT2: istio-csr
   BRANCH2: v0.6.0
-  Dockerfile: Dockerfile-cert
+  Dockerfile: Dockerfile-cert-istio-csr
 
 jobs:
   build:
@@ -32,16 +32,13 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1.5.1
 
-    - uses: actions/setup-go@v4
-      with:
-        go-version: '^1.20'
 
-    - name: Check out build code1
+    - name: Check out build code
       uses: actions/checkout@v2
       with:
-        repository: ${{ env.REPO1 }}
-        ref: ${{ env.BRANCH1 }}
-        path: ${{ env.PROJECT1 }}
+        repository: ${{ env.REPO2 }}
+        ref: ${{ env.BRANCH2 }}
+        path: ${{ env.PROJECT2 }}
 
     - name: Cache Docker layers
       uses: actions/cache@v2
@@ -57,15 +54,14 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USER }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-   
 
     - name: Docker Buildx (push)
       run: |
-        cd cert
+        cd istio-csr
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
-          --tag yylt/cert-manager:${{ steps.date.outputs.date }} \
+          --tag yylt/istio-csr:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./
 
