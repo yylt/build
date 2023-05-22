@@ -1,27 +1,45 @@
-FROM golang:1.17 as builder
+FROM ubuntu:jammy
+ARG TARGETPLATFORM
+ENV DEBIAN_FRONTEND=noninteractive
 
-WORKDIR /root/go/src/github.com/kubeovn/kube-ovn
+# Do not add more stuff to this list that isn't small or critically useful.
+# If you occasionally need something on the container do
+# sudo apt-get update && apt-get whichever
 
-COPY . .
-RUN arch="$(uname -m)"; \
-    case "$arch" in \
-        aarch64) make build-go-arm ;; \
-        x86_64) make build-go ;; \
-    esac; 
+# hadolint ignore=DL3005,DL3008
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y \
+  ca-certificates \
+  curl \
+  iptables \
+  iproute2 \
+  iputils-ping \
+  knot-dnsutils \
+  netcat \
+  tcpdump \
+  conntrack \
+  bsdmainutils \
+  net-tools \
+  lsof \
+  sudo \
+  && update-ca-certificates \
+  && apt-get upgrade -y \
+  && apt-get clean \
+  && rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old \
+  && update-alternatives --set iptables /usr/sbin/iptables-nft \
+  && update-alternatives --set ip6tables /usr/sbin/ip6tables-nft && \
+  useradd -m --uid 1337 istio-proxy && \
+  echo "istio-proxy ALL=NOPASSWD: ALL" >> /etc/sudoers
 
-FROM kubeovn/kube-ovn-base:v1.9.0
+COPY $TARGETPLATFORM/pilot-agent /usr/local/bin/pilot-agent
+COPY $TARGETPLATFORM/envoy /usr/local/bin/envoy
 
-WORKDIR /kube-ovn
-COPY ./dist/images/*.sh ./
-COPY ./dist/images/01-kube-ovn.conflist ./
-COPY ./dist/images/logrotate/* /etc/logrotate.d/
-COPY ./dist/images/grace_stop_ovn_controller /usr/share/ovn/scripts/grace_stop_ovn_controller
+COPY envoy_bootstrap.json /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
 
-COPY --from=builder /root/go/src/github.com/kubeovn/kube-ovn/dist/images/kube-ovn ./kube-ovn
-COPY --from=builder /root/go/src/github.com/kubeovn/kube-ovn/dist/images/kube-ovn-cmd ./kube-ovn-cmd
-RUN ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-controller && \
-    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-daemon && \
-    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-monitor && \
-    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-pinger && \
-    ln -s /kube-ovn/kube-ovn-cmd /kube-ovn/kube-ovn-speaker
+COPY $TARGETPLATFORM/release/stats-filter.wasm /etc/istio/extensions/stats-filter.wasm
+COPY $TARGETPLATFORM/release/stats-filter.compiled.wasm /etc/istio/extensions/stats-filter.compiled.wasm
+COPY $TARGETPLATFORM/release/metadata-exchange-filter.wasm /etc/istio/extensions/metadata-exchange-filter.wasm
+COPY $TARGETPLATFORM/release/metadata-exchange-filter.compiled.wasm /etc/istio/extensions/metadata-exchange-filter.compiled.wasm
 
+# The pilot-agent will bootstrap Envoy.
+ENTRYPOINT ["/usr/local/bin/pilot-agent"]

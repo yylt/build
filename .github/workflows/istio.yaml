@@ -6,7 +6,7 @@ on:
 
 env:
   PROJECT: istio
-  BRANCH: 1.16.3
+  BRANCH: 1.16.4
   Dockerfile: Dockerfile-istio
 
 
@@ -28,6 +28,11 @@ jobs:
         repository: istio/${{ env.PROJECT }}
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.20
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -51,16 +56,21 @@ jobs:
     - name: build istio binary
       run: |
         cd ${{ env.PROJECT }}
-        TARGET_ARCH=amd64 make build
-        TARGET_ARCH=arm64 make build
-        find . -name "*envoy"
+        TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
+        TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
+        find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
+        mkdir -p out/linux
+        cp out/linux_amd64 out/linux/amd64 -a
+        cp out/linux_arm64 out/linux/arm64 -a
+        tree out
 
-    # - name: Docker Buildx istio (push)
-    #   run: |
-    #     cd ${{ env.PROJECT }}
-    #     docker buildx build \
-    #       --cache-from "type=local,src=/tmp/.buildx-cache" \
-    #       --platform linux/arm64,linux/amd64 \
-    #       --output "type=image,push=true" \
-    #       --tag yylt/${{ env.PROJECT }}:3.0 \
-    #       --file ../${{ env.Dockerfile }} ./
+    - name: Docker Buildx istio (push)
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build \
+          --cache-from "type=local,src=/tmp/.buildx-cache" \
+          --platform linux/amd64,linux/arm64 \
+          --output "type=image,push=true" \
+          --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
+          --file ../${{ env.Dockerfile }} ./out
+
