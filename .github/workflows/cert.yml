@@ -6,12 +6,9 @@ on:
 
 env:
   GO111MODULE: on 
-  REPO1: cert-manager/cert-manager
-  PROJECT1: cert
-  BRANCH1: v1.10.2
-  REPO2: cert-manager/istio-csr
-  PROJECT2: istio-csr
-  BRANCH2: v0.6.0
+  REPO: cert-manager/cert-manager
+  PROJECT: cert
+  BRANCH: v1.11.2
   Dockerfile: Dockerfile-cert
 
 jobs:
@@ -39,9 +36,9 @@ jobs:
     - name: Check out build code1
       uses: actions/checkout@v2
       with:
-        repository: ${{ env.REPO1 }}
-        ref: ${{ env.BRANCH1 }}
-        path: ${{ env.PROJECT1 }}
+        repository: ${{ env.REPO }}
+        ref: ${{ env.BRANCH }}
+        path: ${{ env.PROJECT }}
 
     - name: Cache Docker layers
       uses: actions/cache@v2
@@ -57,14 +54,13 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USER }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-   
 
     - name: Docker Buildx (push)
       run: |
-        cd cert
+        cd ${{ env.PROJECT }}
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
-          --platform linux/arm64,linux/amd64 \
+          --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
           --tag yylt/cert-manager:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./
