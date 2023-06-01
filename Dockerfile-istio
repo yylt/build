@@ -1,5 +1,12 @@
+FROM yylt/istioproxy:1.16.5-202306011019 as extension
+FROM envoyproxy/envoy:contrib-v1.26-latest as proxy
+
 FROM ubuntu:jammy
-ARG TARGETPLATFORM
+
+ARG TARGETOS TARGETARCH TARGETPLATFORM
+ARG VERSION
+
+ENV ISTIO_META_ISTIO_VERSION=$VERSION
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Do not add more stuff to this list that isn't small or critically useful.
@@ -31,15 +38,18 @@ RUN apt-get update && \
   useradd -m --uid 1337 istio-proxy && \
   echo "istio-proxy ALL=NOPASSWD: ALL" >> /etc/sudoers
 
-COPY $TARGETPLATFORM/pilot-agent /usr/local/bin/pilot-agent
-COPY $TARGETPLATFORM/envoy /usr/local/bin/envoy
-
+COPY linux_$TARGETARCH/pilot-agent /usr/local/bin/pilot-agent
 COPY envoy_bootstrap.json /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
 
-COPY $TARGETPLATFORM/release/stats-filter.wasm /etc/istio/extensions/stats-filter.wasm
-COPY $TARGETPLATFORM/release/stats-filter.compiled.wasm /etc/istio/extensions/stats-filter.compiled.wasm
-COPY $TARGETPLATFORM/release/metadata-exchange-filter.wasm /etc/istio/extensions/metadata-exchange-filter.wasm
-COPY $TARGETPLATFORM/release/metadata-exchange-filter.compiled.wasm /etc/istio/extensions/metadata-exchange-filter.compiled.wasm
+# copy envoy from image
+COPY linux_$TARGETARCH/envoy /usr/local/bin/envoy
+#COPY --from=proxy /usr/local/bin/envoy /usr/local/bin/envoy
+
+# copy wasm plugin from image
+# copy --from=extension /metadata_exchange.compiled.wasm /etc/istio/extensions/
+# copy --from=extension /metadata_exchange.wasm /etc/istio/extensions/
+# copy --from=extension /stats.compiled.wasm /etc/istio/extensions/
+# copy --from=extension /stats.wasm /etc/istio/extensions/
 
 # The pilot-agent will bootstrap Envoy.
 ENTRYPOINT ["/usr/local/bin/pilot-agent"]
