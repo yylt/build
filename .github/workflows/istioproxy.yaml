@@ -1,14 +1,13 @@
-name: istio
+name: istioproxy
 
 on:
   push:
-    branches: [ istio ]
+    branches: [ istioproxy ]
 
 env:
-  PROJECT: istio
-  PROJECT2: proxy
+  PROJECT: proxy
   BRANCH: 1.16.5
-  Dockerfile: Dockerfile-istio
+  Dockerfile: Dockerfile-istioproxy
 
 jobs:
   build:
@@ -28,13 +27,6 @@ jobs:
         repository: istio/${{ env.PROJECT }}
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
-
-    - name: Check out build code proxy
-      uses: actions/checkout@v2
-      with:
-        repository: istio/${{ env.PROJECT2 }}
-        ref: ${{ env.BRANCH }}
-        path: ${{ env.PROJECT2 }}
 
     - name: Set up Go
       uses: actions/setup-go@v2
@@ -67,12 +59,10 @@ jobs:
 
     - name: build istio proxy binary
       run: |
-        cd ${{ env.PROJECT2 }}
+        cd ${{ env.PROJECT }}
         BAZEL_TEST_TARGETS="" E2E_TEST_TARGETS="" make build_wasm
-        cp bazel-bin bin -a
-        cp bazel-out out -a
-        tree bin
-        tree out
+        cp bazel-bin/extensions ./ -a
+        tree .
 
     # - name: build istio binary
     #   run: |
@@ -82,13 +72,13 @@ jobs:
     #     find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
     #     tree out
 
-    # - name: Docker Buildx istio (push)
-    #   run: |
-    #     cd ${{ env.PROJECT }}
-    #     docker buildx build \
-    #       --cache-from "type=local,src=/tmp/.buildx-cache" \
-    #       --platform linux/amd64,linux/arm64 \
-    #       --output "type=image,push=true" \
-    #       --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
-    #       --file ../${{ env.Dockerfile }} ./out
+    - name: Docker Buildx istio (push)
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build \
+          --cache-from "type=local,src=/tmp/.buildx-cache" \
+          --platform linux/amd64 \
+          --output "type=image,push=true" \
+          --tag yylt/istioproxy:${{ env.BRANCH }}-${{ steps.date.outputs.date }} \
+          --file ../${{ env.Dockerfile }} ./
 
