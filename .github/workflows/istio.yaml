@@ -6,10 +6,10 @@ on:
 
 env:
   PROJECT: istio
-  PROJECT2: proxy
   BRANCH: 1.16.5
   Dockerfile: Dockerfile-istio
-
+  Dockerfile2: Dockerfile-istiod
+  
 jobs:
   build:
     name: Build
@@ -29,22 +29,10 @@ jobs:
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
 
-    - name: Check out build code proxy
-      uses: actions/checkout@v2
-      with:
-        repository: istio/${{ env.PROJECT2 }}
-        ref: ${{ env.BRANCH }}
-        path: ${{ env.PROJECT2 }}
-
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
         go-version: 1.20
-
-    - name: Setup Ninja
-      uses: ashutoshvarma/setup-ninja@master
-      with:
-        dest: /usr/local/bin
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -65,30 +53,35 @@ jobs:
         path: /tmp/.buildx-cache
         key: ${{ runner.os }}-buildx
 
-    - name: build istio proxy binary
+    - name: build istio binary
       run: |
-        cd ${{ env.PROJECT2 }}
-        BAZEL_TEST_TARGETS="" E2E_TEST_TARGETS="" make build_wasm
-        cp bazel-bin bin -a
-        cp bazel-out out -a
-        tree bin
+        cd ${{ env.PROJECT }}
+        TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
+        TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
+        find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
+        # mkdir -p out/linux
+        # cp out/linux_amd64 out/linux/amd64 -a
+        # cp out/linux_arm64 out/linux/arm64 -a
         tree out
 
-    # - name: build istio binary
-    #   run: |
-    #     cd ${{ env.PROJECT }}
-    #     TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
-    #     # TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
-    #     find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
-    #     tree out
-
-    # - name: Docker Buildx istio (push)
+    # - name: Docker Buildx istio proxy (push)
     #   run: |
     #     cd ${{ env.PROJECT }}
     #     docker buildx build \
     #       --cache-from "type=local,src=/tmp/.buildx-cache" \
     #       --platform linux/amd64,linux/arm64 \
     #       --output "type=image,push=true" \
-    #       --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
-    #       --file ../${{ env.Dockerfile }} ./out
+    #       --tag yylt/pilot:${{ steps.date.outputs.date }} \
+    #       --file ../${{ env.Dockerfile2 }} ./out
+
+    - name: Docker Buildx istio proxy (push)
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build \
+          --cache-from "type=local,src=/tmp/.buildx-cache" \
+          --platform linux/amd64,linux/arm64 \
+          --output "type=image,push=true" \
+          --build-arg "VERSION=${{ env.BRANCH }}" \
+          --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
+          --file ../${{ env.Dockerfile }} ./out
 
