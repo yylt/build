@@ -77,7 +77,7 @@ jobs:
         cd ${{ env.PROJECT }}
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
-          --platform linux/amd64 \
+          --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
           --tag yylt/istioproxy:${{ env.BRANCH }}-${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./

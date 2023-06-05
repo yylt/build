@@ -41,7 +41,7 @@ RUN apt-get update && \
 COPY linux_$TARGETARCH/pilot-agent /usr/local/bin/pilot-agent
 COPY envoy_bootstrap.json /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
 
-# copy envoy from image
+# copy envoy
 COPY linux_$TARGETARCH/envoy /usr/local/bin/envoy
 #COPY --from=proxy /usr/local/bin/envoy /usr/local/bin/envoy
 
@@ -50,6 +50,7 @@ COPY linux_$TARGETARCH/envoy /usr/local/bin/envoy
 # copy --from=extension /metadata_exchange.wasm /etc/istio/extensions/
 # copy --from=extension /stats.compiled.wasm /etc/istio/extensions/
 # copy --from=extension /stats.wasm /etc/istio/extensions/
+
 
 # The pilot-agent will bootstrap Envoy.
 ENTRYPOINT ["/usr/local/bin/pilot-agent"]
