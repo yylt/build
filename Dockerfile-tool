@@ -1,11 +1,22 @@
 
-FROM golang:1.19 as builder
+FROM ubuntu:latest as builder
+
 WORKDIR /workspace
-COPY . .
-RUN cd containerd && make bin/ctr 
+
+ARG TARGETARCH
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    case "${TARGETARCH}" in \
+        arm64) ARCH='arm64' ;; \
+        amd64) ARCH='x86_64' ;; \
+    esac; \
+    curl -L -k https://github.com/google/go-containerregistry/releases/download/v0.15.2/go-containerregistry_Linux_$ARCH.tar.gz | tar -xzf -  && \
+    curl -L -k https://github.com/containerd/containerd/releases/download/v1.7.2/cri-containerd-1.7.2-linux-$TARGETARCH.tar.gz | tar -xzf - 
 
 
-FROM debian:sid-slim
 
-COPY --from=builder /workspace/containerd/bin/ctr /usr/bin/
-
+FROM alpine
+RUN  apk -U --no-cache add git curl
+COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
+COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
+COPY --from=builder /workspace/crane /usr/bin/
