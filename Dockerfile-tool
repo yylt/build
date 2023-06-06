@@ -16,7 +16,7 @@ RUN apt-get update && \
 
 
 FROM alpine
-RUN  apk -U --no-cache add git curl
+RUN  apk -U --no-cache add curl
 COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
 COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
 COPY --from=builder /workspace/crane /usr/bin/
