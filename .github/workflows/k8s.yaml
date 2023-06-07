@@ -59,10 +59,10 @@ jobs:
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
 
         # export KUBE_BUILD_PLATFORMS=linux/arm64
-        # make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
+        # make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
 
         export KUBE_BUILD_PLATFORMS=linux/amd64
-        make kubelet kube-proxy kube-controller-manager kube-scheduler kube-apiserver kubectl cloud-controller-manager
+        make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
         tree _output
 
     - name: Login to DockerHub
