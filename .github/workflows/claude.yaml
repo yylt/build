@@ -7,7 +7,7 @@ on:
 env:
   REPO: yylt/claude-to-chatgpt
   PROJECT: claude
-  BRANCH: slack
+  BRANCH: poe
   
 jobs:
   build:
@@ -47,7 +47,7 @@ jobs:
         path: /tmp/.buildx-cache
         key: ${{ runner.os }}-buildx
 
-    - name: Docker Buildx istio proxy (push)
+    - name: Docker Buildx claude 2 chatgpt (push)
       run: |
         cd ${{ env.PROJECT }}
         docker buildx build \
