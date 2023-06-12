@@ -11,12 +11,26 @@ RUN apt-get update && \
         amd64) ARCH='x86_64' ;; \
     esac; \
     curl -L -k https://github.com/google/go-containerregistry/releases/download/v0.15.2/go-containerregistry_Linux_$ARCH.tar.gz | tar -xzf -  && \
-    curl -L -k https://github.com/containerd/containerd/releases/download/v1.7.2/cri-containerd-1.7.2-linux-$TARGETARCH.tar.gz | tar -xzf - 
+    curl -L -k https://github.com/containerd/containerd/releases/download/v1.7.2/cri-containerd-1.7.2-linux-$TARGETARCH.tar.gz | tar -xzf - && \
+    curl -L -k https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_$TARGETARCH -o yq && chmod +x yq && \
+    curl -L -k https://dl.min.io/client/mc/release/linux-$TARGETARCH/mc -o mc && chmod +x mc 
 
 
+FROM annupadhdhyay/helm2:2.12.3 as helm
 
-FROM alpine
-RUN  apk -U --no-cache add curl
-COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
-COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
+# FROM alpine
+# RUN  apk -U --no-cache add curl jq git bash openssh netcat-openbsd wrk #py3-pip
+# RUN pip3 install --no-cache-dir  s3cmd 
+# COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
+# COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
+
+FROM debian:stable-slim
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl jq git bash openssh-client netcat-openbsd wrk && \
+    rm -rf /var/lib/apt/lists/* 
+
 COPY --from=builder /workspace/crane /usr/bin/
+COPY --from=builder /workspace/yq /usr/bin/
+COPY --from=builder /workspace/mc /usr/bin/
+COPY --from=helm /usr/bin/helm /usr/bin/
+
