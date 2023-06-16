@@ -8,7 +8,7 @@ env:
   REPO: yylt/claude-to-chatgpt
   PROJECT: claude
   BRANCH: poe
-  
+
 jobs:
   build:
     name: Build
