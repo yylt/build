@@ -1,14 +1,14 @@
-name: claude
+name: chatbotui
 
 on:
   push:
-    branches: [ claude ]
+    branches: [ chatbotui ]
 
 env:
-  REPO: yylt/claude-to-chatgpt
-  PROJECT: claude
-  BRANCH: poe
-
+  REPO: mckaywrigley/chatbot-ui
+  PROJECT: ui
+  BRANCH: main
+  
 jobs:
   build:
     name: Build
@@ -47,13 +47,13 @@ jobs:
         path: /tmp/.buildx-cache
         key: ${{ runner.os }}-buildx
 
-    - name: Docker Buildx claude 2 chatgpt (push)
+    - name: Docker Buildx chatbot ui (push)
       run: |
         cd ${{ env.PROJECT }}
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
-          --tag yylt/claude:${{ steps.date.outputs.date }} \
+          --tag yylt/chatbotui:${{ steps.date.outputs.date }} \
           --file ./Dockerfile .
 
