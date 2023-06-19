@@ -1,0 +1,23 @@
+FROM debian:bullseye
+
+
+ENV TZ=UTC-8 LANGUAGE=zh_CN.UTF-8 LC_ALL=zh_CN.UTF-8 LANG=zh_CN.UTF-8 TERM=xterm DEBIAN_FRONTEND=noninteractive \
+    LANG=en_US.utf8 PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/sbin:/usr/sbin   \
+    AUDIO_GID=63 VIDEO_GID=39 GID=1000 UID=1000 
+
+# RUN echo '\ndeb [trusted=yes] https://community-packages.deepin.com/deepin apricot main non-free' >> /etc/apt/sources.list && \
+#     echo '\ndeb [trusted=yes] https://com-store-packages.uniontech.com/appstore deepin appstore' >> /etc/apt/sources.list && \
+
+RUN echo '\ndeb [trusted=yes] https://deepin-wine.i-m.dev /' >> /etc/apt/sources.list && \
+    dpkg --add-architecture i386 && apt-get -o Acquire::https::Verify-Peer=false update && \
+    apt-get install -y -o Acquire::https::Verify-Peer=false --no-install-recommends bash locales && \
+    echo 'zh_CN.UTF-8 UTF-8' > /etc/locale.gen && locale-gen && \
+    echo -e 'LANG="zh_CN.UTF-8"\nLANGUAGE="zh_CN:zh"\n' > /etc/default/locale &&  \
+    groupadd -o -g $GID wechat && groupmod -o -g $AUDIO_GID audio &&     groupmod -o -g $VIDEO_GID video &&  \
+    useradd -d "/home/wechat" -m -o -u $UID -g wechat -G audio,video wechat && mkdir /WeChatFiles && chown -R wechat:wechat /WeChatFiles &&  \
+    apt-get install -y  -o Acquire::https::Verify-Peer=false --no-install-recommends x11-utils python2 fonts-wqy-microhei com.qq.weixin.deepin && \
+    apt-get -y autoremove --purge && apt-get autoclean -y && apt-get clean -y &&  \
+    find /var/lib/apt/lists -type f -delete && find /var/cache -type f -delete &&  \
+    find /var/log -type f -delete && find /usr/share/doc -type f -delete &&  find /usr/share/man -type f -delete 
+
+COPY scripts/weixin.sh /
