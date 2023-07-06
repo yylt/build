@@ -23,6 +23,10 @@ FROM annupadhdhyay/helm2:2.12.3 as helm
 #    rm -rf /var/lib/apt/lists/* 
 
 FROM alpine
+ARG TARGETARCH
+
+COPY ./entrypoint/kubernetes-entrypoint_$TARGETARCH /usr/bin/kubernetes-entrypoint
+
 RUN  apk -U --no-cache add curl jq git bash openssh netcat-openbsd wrk #py3-pip
 # RUN pip3 install --no-cache-dir  s3cmd 
 # COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
@@ -31,3 +35,4 @@ COPY --from=builder /workspace/crane /usr/bin/
 COPY --from=builder /workspace/yq /usr/bin/
 COPY --from=builder /workspace/mc /usr/bin/
 COPY --from=helm /usr/bin/helm /usr/bin/
+
