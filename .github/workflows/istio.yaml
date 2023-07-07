@@ -6,7 +6,7 @@ on:
 
 env:
   PROJECT: istio
-  BRANCH: 1.16.5
+  BRANCH: 1.18.0
   Dockerfile: Dockerfile-istio
   Dockerfile2: Dockerfile-istiod
   
@@ -29,10 +29,10 @@ jobs:
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
+    - uses: actions/setup-go@v4
+      name: Set up golang
       with:
-        go-version: 1.20
+        go-version: '^1.20'
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -64,16 +64,6 @@ jobs:
         # cp out/linux_arm64 out/linux/arm64 -a
         tree out
 
-    # - name: Docker Buildx istio proxy (push)
-    #   run: |
-    #     cd ${{ env.PROJECT }}
-    #     docker buildx build \
-    #       --cache-from "type=local,src=/tmp/.buildx-cache" \
-    #       --platform linux/amd64,linux/arm64 \
-    #       --output "type=image,push=true" \
-    #       --tag yylt/pilot:${{ steps.date.outputs.date }} \
-    #       --file ../${{ env.Dockerfile2 }} ./out
-
     - name: Docker Buildx istio proxy (push)
       run: |
         cd ${{ env.PROJECT }}
@@ -85,3 +75,12 @@ jobs:
           --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./out
 
+    - name: Docker Buildx istiod (push)
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build \
+          --cache-from "type=local,src=/tmp/.buildx-cache" \
+          --platform linux/amd64,linux/arm64 \
+          --output "type=image,push=true" \
+          --tag yylt/pilot:${{ steps.date.outputs.date }} \
+          --file ../${{ env.Dockerfile2 }} ./out

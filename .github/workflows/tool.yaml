@@ -19,6 +19,7 @@ jobs:
     - name: Check out repo code
       uses: actions/checkout@v2
 
+
     - name: Check out build code1
       uses: actions/checkout@v2
       with:
@@ -26,12 +27,14 @@ jobs:
         ref: master
         path: entrypoint
 
+
     - name: Check out build code2
       uses: actions/checkout@v2
       with:
         repository: belitre/gotpl
         ref: master
         path: gotpl
+
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -76,6 +79,7 @@ jobs:
         make get-modules
         GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' -o kubernetes-entrypoint_amd64
         GOARCH=arm64 CGO_ENABLED=0 go build -ldflags '-w -s' -o kubernetes-entrypoint_arm64
+
 
     - name: Docker Buildx (push)
       run: |

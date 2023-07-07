@@ -30,6 +30,7 @@ COPY ./entrypoint/kubernetes-entrypoint_$TARGETARCH /usr/bin/kubernetes-entrypoi
 COPY ./gotpl/gotpl_$TARGETARCH /usr/bin/gotpl
 
 RUN  apk -U --no-cache add curl jq git bash netcat-openbsd wrk #py3-pip openssh
+
 # RUN pip3 install --no-cache-dir  s3cmd 
 # COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
 # COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
@@ -39,3 +40,4 @@ COPY --from=builder /workspace/yq /usr/bin/
 COPY --from=builder /workspace/mc /usr/bin/
 COPY --from=helm /usr/bin/helm /usr/bin/
 COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
+

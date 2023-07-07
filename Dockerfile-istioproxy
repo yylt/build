@@ -1,3 +1,5 @@
 FROM busybox:latest
 
+ENV ISTIO_META_ISTIO_VERSION $istio_version
+
 COPY extensions /

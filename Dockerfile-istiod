@@ -1,6 +1,5 @@
 FROM busybox:latest
 
-
 ARG TARGETOS TARGETARCH TARGETPLATFORM
 
 COPY linux_${TARGETARCH}/pilot-discovery /usr/local/bin/pilot-discovery
