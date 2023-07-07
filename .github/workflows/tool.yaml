@@ -6,7 +6,7 @@ on:
 
 env:
   Dockerfile: Dockerfile-tool
-
+  GO111MODULE: on
 jobs:
   build:
     name: Build
@@ -19,12 +19,19 @@ jobs:
     - name: Check out repo code
       uses: actions/checkout@v2
 
-    - name: Check out build code
+    - name: Check out build code1
       uses: actions/checkout@v2
       with:
         repository: airshipit/kubernetes-entrypoint
         ref: master
         path: entrypoint
+
+    - name: Check out build code2
+      uses: actions/checkout@v2
+      with:
+        repository: belitre/gotpl
+        ref: master
+        path: gotpl
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -56,13 +63,19 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USER }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
+    - name: Build gotpl (push)
+      run: |
+        cd gotpl
+        go mod tidy
+        GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' -o gotpl_amd64
+        GOARCH=arm64 CGO_ENABLED=0 go build -ldflags '-w -s' -o gotpl_arm64
+
     - name: Build kubernetes-entrypoint (push)
       run: |
         cd entrypoint
-        export GO111MODULE=on
         make get-modules
-        GOARCH=amd64 CGO_ENABLED=0 go build -o kubernetes-entrypoint_amd64
-        GOARCH=arm64 CGO_ENABLED=0 go build -o kubernetes-entrypoint_arm64
+        GOARCH=amd64 CGO_ENABLED=0 go build -ldflags '-w -s' -o kubernetes-entrypoint_amd64
+        GOARCH=arm64 CGO_ENABLED=0 go build -ldflags '-w -s' -o kubernetes-entrypoint_arm64
 
     - name: Docker Buildx (push)
       run: |

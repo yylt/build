@@ -12,10 +12,11 @@ RUN apt-get update && \
     curl -L -k https://github.com/google/go-containerregistry/releases/download/v0.15.2/go-containerregistry_Linux_$ARCH.tar.gz | tar -xzf -  && \
     curl -L -k https://github.com/containerd/containerd/releases/download/v1.7.2/cri-containerd-1.7.2-linux-$TARGETARCH.tar.gz | tar -xzf - && \
     curl -L -k https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_$TARGETARCH -o yq && chmod +x yq && \
-    curl -L -k https://dl.min.io/client/mc/release/linux-$TARGETARCH/mc -o mc && chmod +x mc 
+    curl -L -k https://dl.min.io/client/mc/release/linux-$TARGETARCH/mc -o mc && chmod +x mc && \
+    curl -L -k https://github.com/hairyhenderson/gomplate/releases/download/v3.11.5/gomplate_linux-$TARGETARCH -o gomplate && chmod +x gomplate
 
 FROM annupadhdhyay/helm2:2.12.3 as helm
-
+FROM bitnami/kubectl:1.25 as kube
 
 # FROM debian:stable-slim
 # RUN apt-get update && \
@@ -26,13 +27,15 @@ FROM alpine
 ARG TARGETARCH
 
 COPY ./entrypoint/kubernetes-entrypoint_$TARGETARCH /usr/bin/kubernetes-entrypoint
+COPY ./gotpl/gotpl_$TARGETARCH /usr/bin/gotpl
 
-RUN  apk -U --no-cache add curl jq git bash openssh netcat-openbsd wrk #py3-pip
+RUN  apk -U --no-cache add curl jq git bash netcat-openbsd wrk #py3-pip openssh
 # RUN pip3 install --no-cache-dir  s3cmd 
 # COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
 # COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
+# COPY --from=builder /workspace/gomplate /usr/bin/
 COPY --from=builder /workspace/crane /usr/bin/
 COPY --from=builder /workspace/yq /usr/bin/
 COPY --from=builder /workspace/mc /usr/bin/
 COPY --from=helm /usr/bin/helm /usr/bin/
-
+COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
