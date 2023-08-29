@@ -1,0 +1,21 @@
+# ubi8/openssl is essentially ubi8-micro with openssl
+# refrence github.com/kiali/kiali : deploy/docker/Dockerfile-multi-arch-distroless
+FROM registry.access.redhat.com/ubi8/openssl
+
+ARG TARGETARCH
+# Add kiali user and group
+RUN echo kiali:x:1000: >> /etc/group
+RUN echo kiali:x:1000:1000:/home/kiali:/sbin/nologin >> /etc/passwd
+
+ENV KIALI_HOME=/opt/kiali \
+    PATH=$KIALI_HOME:$PATH
+
+WORKDIR $KIALI_HOME
+
+
+COPY --chown=1000:1000 kiali-${TARGETARCH} $KIALI_HOME/kiali
+COPY --chown=1000:1000 console/ $KIALI_HOME/console/
+
+USER 1000
+
+ENTRYPOINT ["/opt/kiali/kiali"]
