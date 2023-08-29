@@ -6,7 +6,7 @@ on:
 
 env:
   PROJECT: istio
-  BRANCH: 1.18.0
+  BRANCH: 1.18.2
   Dockerfile: Dockerfile-istio
   Dockerfile2: Dockerfile-istiod
   
