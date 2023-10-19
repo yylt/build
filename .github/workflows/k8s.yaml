@@ -5,9 +5,9 @@ on:
     branches: [ k8s ]
 
 env:
-  GO111MODULE: on 
+  REPO: easystack/kubernetes
   PROJECT: kubernetes
-  BRANCH: v1.26.5-y
+  BRANCH: v1.27.6-es
   Dockerfile: Dockerfile-k8s
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
     - name: Set up Go 
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.20'
+        go-version: '^1.21'
 
     - name: install arm tools
       run: |
@@ -34,9 +34,9 @@ jobs:
     - name: Check out build code
       uses: actions/checkout@v2
       with:
-        repository: yylt/kubernetes
+        repository: ${{ env.REPO }}
         ref: ${{ env.BRANCH }}
-        #token: ${{ secrets.KPULL }}  
+        token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
     - name: Set up QEMU
@@ -58,11 +58,11 @@ jobs:
         export KUBE_GIT_COMMIT=""
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
 
-        # export KUBE_BUILD_PLATFORMS=linux/arm64
-        # make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
-
-        export KUBE_BUILD_PLATFORMS=linux/amd64
+        export KUBE_BUILD_PLATFORMS=linux/arm64
         make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
+
+        # export KUBE_BUILD_PLATFORMS=linux/amd64
+        # make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
         tree _output
 
     - name: Login to DockerHub
@@ -76,7 +76,7 @@ jobs:
         cd ${{ env.PROJECT }}
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
-          --platform linux/amd64 \
+          --platform linux/arm64 \
           --output "type=image,push=true" \
           --tag yylt/hyperkube:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} .
