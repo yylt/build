@@ -7,7 +7,7 @@ on:
 env:
   REPO: yylt/cilium
   PROJECT: ciliumagent
-  BRANCH: sl
+  BRANCH: eni
   Dockerfile: Dockerfile-ciliumagent
 
 jobs:
