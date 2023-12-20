@@ -1,10 +1,6 @@
-FROM yylt/istioproxy:1.16.5-202306011019 as extension
-FROM envoyproxy/envoy:contrib-v1.26-latest as proxy
-
 FROM ubuntu:jammy
 
-ARG TARGETOS TARGETARCH TARGETPLATFORM
-ARG VERSION
+ARG TARGETOS TARGETARCH TARGETPLATFORM VERSION
 
 ENV ISTIO_META_ISTIO_VERSION=$VERSION
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,23 +23,22 @@ RUN apt-get update && \
   conntrack \
   bsdmainutils \
   net-tools \
+  kmod \
   lsof \
   sudo \
   && update-ca-certificates \
   && apt-get upgrade -y \
   && apt-get clean \
   && rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old \
-  && update-alternatives --set iptables /usr/sbin/iptables-nft \
-  && update-alternatives --set ip6tables /usr/sbin/ip6tables-nft && \
+  && update-alternatives --set iptables /usr/sbin/iptables-legacy \
+  && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy && \
   useradd -m --uid 1337 istio-proxy && \
   echo "istio-proxy ALL=NOPASSWD: ALL" >> /etc/sudoers
 
 COPY linux_$TARGETARCH/pilot-agent /usr/local/bin/pilot-agent
 COPY envoy_bootstrap.json /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
 
-# copy envoy
 COPY linux_$TARGETARCH/envoy /usr/local/bin/envoy
-#COPY --from=proxy /usr/local/bin/envoy /usr/local/bin/envoy
 
 # copy wasm plugin from image
 # copy --from=extension /metadata_exchange.compiled.wasm /etc/istio/extensions/

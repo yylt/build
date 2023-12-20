@@ -6,7 +6,7 @@ on:
 
 env:
   PROJECT: istio
-  BRANCH: 1.18.2
+  BRANCH: 1.19.5
   Dockerfile: Dockerfile-istio
   Dockerfile2: Dockerfile-istiod
   
@@ -32,7 +32,7 @@ jobs:
     - uses: actions/setup-go@v4
       name: Set up golang
       with:
-        go-version: '^1.20'
+        go-version: '^1.21'
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -72,7 +72,7 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
           --build-arg "VERSION=${{ env.BRANCH }}" \
-          --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
+          --tag yylt/proxyv2:${{ env.BRANCH }}-${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./out
 
     - name: Docker Buildx istiod (push)
@@ -82,5 +82,5 @@ jobs:
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
-          --tag yylt/pilot:${{ steps.date.outputs.date }} \
+          --tag yylt/pilot:${{ env.BRANCH }}-${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile2 }} ./out

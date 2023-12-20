@@ -5,10 +5,10 @@ on:
     branches: [ istioproxy ]
 
 env:
-  PROJECT: proxy
-  BRANCH: 1.16.5
+  PROJECT: istio
+  BRANCH: 1.19.5
   Dockerfile: Dockerfile-istioproxy
-
+  
 jobs:
   build:
     name: Build
@@ -28,15 +28,10 @@ jobs:
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
+    - uses: actions/setup-go@v4
+      name: Set up golang
       with:
-        go-version: 1.20
-
-    - name: Setup Ninja
-      uses: ashutoshvarma/setup-ninja@master
-      with:
-        dest: /usr/local/bin
+        go-version: '^1.21'
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -57,28 +52,21 @@ jobs:
         path: /tmp/.buildx-cache
         key: ${{ runner.os }}-buildx
 
-    - name: build istio proxy binary
+    - name: build istio binary
       run: |
         cd ${{ env.PROJECT }}
-        BAZEL_TEST_TARGETS="" E2E_TEST_TARGETS="" make build_wasm
-        cp bazel-bin/extensions ./ -a
-        tree .
+        TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
+        TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
+        find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
+        tree out
 
-    # - name: build istio binary
-    #   run: |
-    #     cd ${{ env.PROJECT }}
-    #     TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
-    #     # TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
-    #     find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
-    #     tree out
-
-    - name: Docker Buildx istio (push)
+    - name: Docker Buildx istio proxy (push)
       run: |
         cd ${{ env.PROJECT }}
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
-          --tag yylt/istioproxy:${{ env.BRANCH }}-${{ steps.date.outputs.date }} \
-          --file ../${{ env.Dockerfile }} ./
-
+          --build-arg "VERSION=${{ env.BRANCH }}" \
+          --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
+          --file ../${{ env.Dockerfile }} ./out
