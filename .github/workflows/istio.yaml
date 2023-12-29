@@ -37,6 +37,7 @@ jobs:
         repository: easystack/${{ env.PROJECT2 }}
         ref: ${{ env.BRANCH2 }}
         path: ${{ env.PROJECT2 }}
+        token: ${{ secrets.KPULL }} 
 
     - uses: actions/setup-go@v4
       name: Set up golang
