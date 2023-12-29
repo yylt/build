@@ -9,6 +9,8 @@ env:
   BRANCH: 1.19.5
   Dockerfile: Dockerfile-istio
   Dockerfile2: Dockerfile-istiod
+  PROJECT2: check-sidecar
+  BRANCH2: master
   
 jobs:
   build:
@@ -28,6 +30,13 @@ jobs:
         repository: istio/${{ env.PROJECT }}
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
+
+    - name: Check out check-sidecar code
+      uses: actions/checkout@v2
+      with:
+        repository: easystack/${{ env.PROJECT2 }}
+        ref: ${{ env.BRANCH2 }}
+        path: ${{ env.PROJECT2 }}
 
     - uses: actions/setup-go@v4
       name: Set up golang
@@ -63,6 +72,15 @@ jobs:
         # cp out/linux_amd64 out/linux/amd64 -a
         # cp out/linux_arm64 out/linux/arm64 -a
         tree out
+
+    - name: build check-sidecar binary
+      run: |
+        cd ${{ env.PROJECT2 }}
+        GOOS=linux GOARCH=amd64 make
+        cp bin/check-sidecar ${{ env.PROJECT }}/out/linux/amd64/
+        GOOS=linux GOARCH=arm64 make
+        cp bin/check-sidecar ${{ env.PROJECT }}/out/linux/arm64/
+        tree ${{ env.PROJECT }}/out
 
     - name: Docker Buildx istio proxy (push)
       run: |
