@@ -68,21 +68,6 @@ jobs:
         TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
         TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
         find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
-        cd ${{ env.PROJECT2 }}
-        GOOS=linux GOARCH=amd64 make
-        cp bin/check-sidecar ${{ env.PROJECT }}/out/linux/amd64/
-        GOOS=linux GOARCH=arm64 make
-        cp bin/check-sidecar ${{ env.PROJECT }}/out/linux/arm64/
-        # mkdir -p out/linux
-        # cp out/linux_amd64 out/linux/amd64 -a
-        # cp out/linux_arm64 out/linux/arm64 -a
-        tree out
-      - name: build check-sidecar binary
-      run: |
-        cd ${{ env.PROJECT }}
-        TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
-        TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
-        find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
         # mkdir -p out/linux
         # cp out/linux_amd64 out/linux/amd64 -a
         # cp out/linux_arm64 out/linux/arm64 -a
