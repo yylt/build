@@ -6,6 +6,7 @@ COPY linux_${TARGETARCH}/pilot-discovery /usr/local/bin/pilot-discovery
 
 # copy form container: cp proc/$pid/root/istioctl  /usr/bin/
 COPY linux_${TARGETARCH}/istioctl /usr/local/bin/istioctl
+COPY linux_${TARGETARCH}/check-sidecar /usr/local/bin/check-sidecar
 
 # Copy templates for bootstrap generation.
 COPY envoy_bootstrap.json /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
