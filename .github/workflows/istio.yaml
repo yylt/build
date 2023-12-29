@@ -82,7 +82,7 @@ jobs:
         cp bin/check-sidecar ../${{ env.PROJECT }}/out/linux_amd64/
         GOOS=linux GOARCH=arm64 make
         cp bin/check-sidecar ../${{ env.PROJECT }}/out/linux_arm64/
-        tree ${{ env.PROJECT }}/out
+        tree ../${{ env.PROJECT }}/out
 
     - name: Docker Buildx istio proxy (push)
       run: |
