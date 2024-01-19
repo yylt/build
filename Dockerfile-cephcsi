@@ -1,0 +1,22 @@
+FROM golang:1.21.6-bookworm as build
+
+WORKDIR /root/go/src/github.com/ceph/ceph-csi
+
+COPY . . 
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends librados-dev librbd-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    make cephcsi
+
+
+FROM debian:bookworm-slim
+
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends librados-dev librbd-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /root/go/src/github.com/ceph/ceph-csi/_output/cephcsi /usr/local/bin/cephcsi
+
+ENTRYPOINT ["/usr/local/bin/cephcsi"]
