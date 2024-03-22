@@ -5,10 +5,10 @@ on:
     branches: [ istioproxy ]
 
 env:
-  PROJECT: istio
-  BRANCH: 1.19.5
+  PROJECT: proxy
+  BRANCH: add-generic-proxy
   Dockerfile: Dockerfile-istioproxy
-  
+
 jobs:
   build:
     name: Build
@@ -24,7 +24,7 @@ jobs:
     - name: Check out build code
       uses: actions/checkout@v2
       with:
-        repository: istio/${{ env.PROJECT }}
+        repository: yefengzhichen/${{ env.PROJECT }}
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
 
@@ -55,9 +55,8 @@ jobs:
     - name: build istio binary
       run: |
         cd ${{ env.PROJECT }}
-        TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 make build-linux
-        TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 make build-linux
-        find . -name "*envoy_bootstrap*" -exec cp {} out/ \;
+        TARGET_ARCH=amd64 TARGET_OUT_LINUX=linux/amd64 TARGET_OS=linux make build_envoy
+        TARGET_ARCH=arm64 TARGET_OUT_LINUX=linux/arm64 TARGET_OS=linux make build_envoy
         tree out
 
     - name: Docker Buildx istio proxy (push)
@@ -68,5 +67,5 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
           --build-arg "VERSION=${{ env.BRANCH }}" \
-          --tag yylt/proxyv2:${{ steps.date.outputs.date }} \
+          --tag yylt/proxyv2g:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} ./out
