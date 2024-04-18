@@ -7,23 +7,27 @@ on:
 env:
   GO111MODULE: on 
   PROJECT: kata-containers
-  BRANCH: main
+  BRANCH: stable-2.5
 
 jobs:
   build:
     name: Build
-    runs-on: [self-hosted,arm64]
+    runs-on: 
+    - ubuntu-20.04
     steps:
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
-        target: aarch64-unknown-linux-musl
-        override: false
+        toolchain: 1.68.2
+        override: true
 
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v2
+    - name: Get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+
+    - name: Set up Go 1.22
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.16
+        go-version: 1.22
 
     - name: Check out repo code
       uses: actions/checkout@v2
@@ -36,7 +40,19 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Ghcr Hub
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.GHCR_PASSWORD }}
+
     - name: Build image
       run: |
-        cd ${{ env.PROJECT }}
-        make -f ../kata-image/kata-image.mk build-image containerd-shim-v2 ecr-runtime generate-config
+        cd ${{ env.PROJECT }}/ecr_deploy
+        make -f ../../kata-image/kata-image.mk all
+      env:
+        REGISTRY_NAME: ghcr.io/yylt 
