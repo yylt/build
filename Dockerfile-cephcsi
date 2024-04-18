@@ -14,7 +14,7 @@ FROM debian:bookworm-slim
 
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends librados-dev librbd-dev && \
+    apt-get install -y --no-install-recommends ca-certificates ceph-common librados-dev librbd-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /root/go/src/github.com/ceph/ceph-csi/_output/cephcsi /usr/local/bin/cephcsi
