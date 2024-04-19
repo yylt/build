@@ -116,6 +116,8 @@ package:
 		flex \
 		libelf-dev \
 		libfl-dev \
+		musl-tools \
+		glibc-tools \
 		libseccomp-dev \
 		bc
 
@@ -141,14 +143,18 @@ endif
 build-image: agent
 ifeq ($(shell arch),x86_64)
 	sudo -E apt install -y qemu-utils multistrap; \
+	dir=$(PWD); \
 	cd ../tools/osbuilder; \
+	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
+	export LIBC=gnu; \
 	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
-	export ROOTFS_DIR=$${GOPATH}/src/github.com/kata-containers/kata-containers/tools/osbuilder/rootfs-builder/rootfs; \
-	export AGENT_SOURCE_BIN="$${GOPATH}/src/github.com/kata-containers/kata-containers/src/agent/target/x86_64-unknown-linux-musl/release/kata-agent"; \
+	export ROOTFS_DIR="$${dir}/../tools/osbuilder/rootfs-builder/rootfs"; \
+	export AGENT_SOURCE_BIN="$${dir}/agent/target/x86_64-unknown-linux-gnu/release/kata-agent"; \
 	cd rootfs-builder; \
 	sudo -E ./rootfs.sh ubuntu; \
 	cd ..; \
+	mkdir -p rootfs-builder/rootfs/etc/systemd/system; \
 	sudo -E cp ../../src/agent/kata-agent.service rootfs-builder/rootfs/etc/systemd/system/; \
 	sudo -E cp ../../src/agent/kata-containers.target rootfs-builder/rootfs/etc/systemd/system/; \
 	sudo -E ./image-builder/image_builder.sh rootfs-builder/rootfs; \
@@ -174,8 +180,8 @@ endif
 agent: package
 ifeq ($(shell arch),x86_64)
 	# make -C $(AGENT_DIR) clean
-	export LIBC=gnu
-	make -C $(AGENT_DIR) kata-agent
+	rustup target add x86_64-unknown-linux-musl;
+	LIBC=gnu make -C $(AGENT_DIR) kata-agent
 	make -C $(AGENT_DIR) kata-agent.service
 endif
 
@@ -193,7 +199,7 @@ endif
 
 docker-image:
 ifeq ($(shell arch),x86_64)
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
+	sudo -E docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
 endif
 ifeq ($(shell arch),aarch64)
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
@@ -202,7 +208,7 @@ endif
 
 docker-push: docker-image
 ifeq ($(shell arch),x86_64)
-	docker push $(IMAGE_NAME):$(IMAGE_TAG)
+	sudo -E docker push $(IMAGE_NAME):$(IMAGE_TAG)
 endif
 ifeq ($(shell arch),aarch64)
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)

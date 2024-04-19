@@ -13,7 +13,7 @@ jobs:
   build:
     name: Build
     runs-on: 
-    - ubuntu-20.04
+    - ubuntu-22.04
     steps:
     - uses: actions-rs/toolchain@v1
       with:
