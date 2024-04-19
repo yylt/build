@@ -174,7 +174,7 @@ endif
 agent: package
 ifeq ($(shell arch),x86_64)
 	# make -C $(AGENT_DIR) clean
-	export LIBC = gnu
+	export LIBC=gnu
 	make -C $(AGENT_DIR) kata-agent
 	make -C $(AGENT_DIR) kata-agent.service
 endif
@@ -185,7 +185,7 @@ ifeq ($(shell arch),aarch64)
 	../ci/install_rust.sh; \
 	export PATH=$$PATH:"$$HOME/.cargo/bin"; \
 	rustup target add aarch64-unknown-linux-gnu; \
-	export LIBC = gnu; \
+	export LIBC=gnu; \
 	rustup component add rustfmt clippy; \
 	make -C $(AGENT_DIR) SECCOMP=no kata-agent; \
 	make -C $(AGENT_DIR) kata-agent.service
