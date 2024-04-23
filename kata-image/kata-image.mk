@@ -18,18 +18,18 @@ CONFIG_FILE_NAME ?= configuration.toml
 SOURCE_DIR ?= ../src/runtime
 AGENT_DIR ?= ../src/agent
 REGISTRY_NAME ?= ghcr.io
-IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/ecr-deploy
+IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
 
 ifeq ($(shell arch),aarch64)
 	# aarch64 环境重新命名 IMAGE_NAME 结构
-	IMAGE_NAME = $(REGISTRY_NAME)/arm64v8/ecr-deploy
+	IMAGE_NAME = $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
 endif
 
 LAST_COMMIT_ID = $(shell git rev-parse HEAD)
 IMAGE_TAG = v$(shell cat ../VERSION)-$(LAST_COMMIT_ID)
 
 
-all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push
+all: generate-config build-kernel build-image ecr-runtime containerd-shim-v2 docker-push
 
 containerd-shim-v2:
 ifeq ($(shell arch),x86_64)
@@ -39,15 +39,6 @@ endif
 
 
 ifeq ($(shell arch),aarch64)
-	# aarch64 如果在新建的容器中运行，需要安装如下组件：
-	# apt-get install -y curl wget sudo gcc
-
-	../ci/install_yq.sh; \
-	ln -sf $$GOPATH/bin/yq /usr/bin/yq; \
-	mkdir -p /opt/go $$HOME/go; \
-	export GOROOT="/opt/go"; \
-	export PATH=$$PATH:"/opt/go/bin":"$$HOME/go/bin"; \
-	../ci/install_go.sh; \
 	make -C $(SOURCE_DIR) containerd-shim-v2; \
 	mv $(SOURCE_DIR)/containerd-shim-kata-v2 $(CONTAINERD_SHIM_NAME)
 endif
@@ -59,9 +50,6 @@ ifeq ($(shell arch),x86_64)
 endif
 
 ifeq ($(shell arch),aarch64)
-	mkdir -p /opt/go $$HOME/go; \
-	export GOROOT="/opt/go"; \
-	export PATH=$$PATH:"/opt/go/bin":"$$HOME/go/bin"; \
 	make -C $(SOURCE_DIR) runtime
 	mv $(SOURCE_DIR)/kata-runtime $(ECR_RUNTIME)
 endif
@@ -119,6 +107,7 @@ package:
 		musl-tools \
 		glibc-tools \
 		libseccomp-dev \
+		curl wget sudo \
 		bc
 
 build-kernel: package
@@ -133,9 +122,9 @@ endif
 
 ifeq ($(shell arch),aarch64)
 	cd ../tools/packaging/kernel; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -f -d setup -a aarch64 -E arch-experimental; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -f -d build -a aarch64 -E arch-experimental; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -f -d install -a aarch64 -E arch-experimental; \
+	sudo -E ./build-kernel.sh -v 5.15.63 -f -d setup; \
+	sudo -E ./build-kernel.sh -v 5.15.63 -f -d build; \
+	sudo -E ./build-kernel.sh -v 5.15.63 -f -d install; \
 	sudo -E cp /usr/share/kata-containers/vmlinuz.container ../../../ecr_deploy/vmlinuz.container
 endif
 
@@ -163,10 +152,14 @@ endif
 
 ifeq ($(shell arch),aarch64) 
 	sudo -E apt install -y qemu-utils multistrap; \
+	dir=$(PWD); \
 	cd ../tools/osbuilder; \
+	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
+	export USE_DOCKER=true; \
+	export LIBC=gnu; \
 	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
-	export ROOTFS_DIR=$${GOPATH}/src/github.com/kata-containers/kata-containers/tools/osbuilder/rootfs-builder/rootfs; \
-	export AGENT_SOURCE_BIN="$${GOPATH}/src/github.com/kata-containers/kata-containers/src/agent/target/aarch64-unknown-linux-musl/release/kata-agent"; \
+	export ROOTFS_DIR="$${dir}/../tools/osbuilder/rootfs-builder/rootfs"; \
+	export AGENT_SOURCE_BIN="$${dir}/agent/target/aarch64-unknown-linux-gnu/release/kata-agent"; \
 	cd rootfs-builder; \
 	sudo -E ./rootfs.sh ubuntu; \
 	cd ..; \
@@ -187,13 +180,12 @@ endif
 
 ifeq ($(shell arch),aarch64)
 	# 注意：需要提前 clone kata-containers/tests 项目
-	../ci/install_musl.sh; \
-	../ci/install_rust.sh; \
-	export PATH=$$PATH:"$$HOME/.cargo/bin"; \
-	rustup target add aarch64-unknown-linux-gnu; \
-	export LIBC=gnu; \
-	rustup component add rustfmt clippy; \
-	make -C $(AGENT_DIR) SECCOMP=no kata-agent; \
+	# ../ci/install_musl.sh; \
+	# ../ci/install_rust.sh; \
+	# export PATH=$$PATH:"$$HOME/.cargo/bin"; \
+	# rustup target add aarch64-unknown-linux-gnu; \
+	# rustup component add rustfmt clippy; \
+	LIBC=gnu make -C $(AGENT_DIR) SECCOMP=no kata-agent; \
 	make -C $(AGENT_DIR) kata-agent.service
 endif
 
@@ -202,7 +194,7 @@ ifeq ($(shell arch),x86_64)
 	sudo -E docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
 endif
 ifeq ($(shell arch),aarch64)
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
+	sudo -E docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
 	# docker buildx build --platform=linux/arm64 -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
 endif
 
@@ -211,7 +203,7 @@ ifeq ($(shell arch),x86_64)
 	sudo -E docker push $(IMAGE_NAME):$(IMAGE_TAG)
 endif
 ifeq ($(shell arch),aarch64)
-	docker push $(IMAGE_NAME):$(IMAGE_TAG)
+	sudo -E docker push $(IMAGE_NAME):$(IMAGE_TAG)
 endif
 
 clean:
