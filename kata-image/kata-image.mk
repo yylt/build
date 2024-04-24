@@ -17,12 +17,10 @@ ECR_RUNTIME ?= ecr-runtime
 CONFIG_FILE_NAME ?= configuration.toml
 SOURCE_DIR ?= ../src/runtime
 AGENT_DIR ?= ../src/agent
-REGISTRY_NAME ?= ghcr.io
-IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
-
+IMAGE_NAME ?= liangjingtao/kata-amd64
 ifeq ($(shell arch),aarch64)
 	# aarch64 环境重新命名 IMAGE_NAME 结构
-	IMAGE_NAME = $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
+	IMAGE_NAME = liangjingtao/kata-arm64
 endif
 
 LAST_COMMIT_ID = $(shell git rev-parse HEAD)
