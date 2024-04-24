@@ -39,9 +39,9 @@ jobs:
     - name: Check out build code
       uses: actions/checkout@v2
       with:
-        repository: easystack/kata-containers
+        repository: liangjingtao11/kata-containers
         ref: ${{ env.BRANCH }}
-        token: ${{ secrets.KPULL }}  
+        token: ${{ secrets.KUBERNETESPULL }}
         path: ${{ env.PROJECT }}
 
     - name: Set up Docker Buildx
