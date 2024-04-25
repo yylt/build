@@ -1,4 +1,6 @@
 name: falco ui
+permissions:
+  contents: write
 
 on:
   push:

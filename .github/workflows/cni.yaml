@@ -1,4 +1,6 @@
 name: cni
+permissions:
+  contents: write
 
 on:
   push:

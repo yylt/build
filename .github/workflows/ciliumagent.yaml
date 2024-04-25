@@ -1,4 +1,6 @@
 name: ciliumagent
+permissions:
+  contents: write
 
 on:
   push:

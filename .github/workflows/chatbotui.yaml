@@ -1,4 +1,6 @@
 name: chatbotui
+permissions:
+  contents: write
 
 on:
   push:

@@ -1,4 +1,6 @@
 name: xray
+permissions:
+  contents: write
 
 on:
   push:

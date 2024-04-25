@@ -1,4 +1,6 @@
 name: copy images
+permissions:
+  contents: write
 on:
   push:
     branches: [ copy ]

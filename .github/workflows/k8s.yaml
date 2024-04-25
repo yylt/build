@@ -1,4 +1,6 @@
 name: kubernetes
+permissions:
+  contents: write
 
 on:
   push:

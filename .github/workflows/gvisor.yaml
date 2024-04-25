@@ -1,4 +1,6 @@
-name: gvisor runsc
+name: gvisor
+permissions:
+  contents: write
 
 on:
   push:

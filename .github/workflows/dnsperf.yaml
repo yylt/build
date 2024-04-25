@@ -1,4 +1,6 @@
 name: dnsperf
+permissions:
+  contents: write
 on:
   push:
     branches: [ dnsperf ]

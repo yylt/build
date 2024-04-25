@@ -1,4 +1,6 @@
 name: falcosidekick
+permissions:
+  contents: write
 
 on:
   push:

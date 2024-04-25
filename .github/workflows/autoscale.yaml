@@ -1,4 +1,6 @@
 name: autoscale
+permissions:
+  contents: write
 on:
   push:
     branches: [ autoscale ]

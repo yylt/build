@@ -1,4 +1,6 @@
 name: firecracker rootfs 
+permissions:
+  contents: write
 
 on:
   push:

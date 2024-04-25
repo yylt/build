@@ -20,16 +20,18 @@ AGENT_DIR ?= ../src/agent
 REGISTRY_NAME ?= ghcr.io
 IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
 
+LAST_COMMIT_ID ?= $(shell git rev-parse HEAD)
+IMAGE_TAG ?= v$(shell cat ../VERSION)-$(LAST_COMMIT_ID)
+
 ifeq ($(shell arch),aarch64)
 	# aarch64 环境重新命名 IMAGE_NAME 结构
 	IMAGE_NAME = $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
 endif
 
-LAST_COMMIT_ID = $(shell git rev-parse HEAD)
-IMAGE_TAG = v$(shell cat ../VERSION)-$(LAST_COMMIT_ID)
 
 
-all: generate-config build-kernel build-image ecr-runtime containerd-shim-v2 docker-push
+
+all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push
 
 containerd-shim-v2:
 ifeq ($(shell arch),x86_64)
@@ -122,6 +124,10 @@ endif
 
 ifeq ($(shell arch),aarch64)
 	cd ../tools/packaging/kernel; \
+	sudo -E echo "" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFS_COMMON=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "" >> configs/fragments/arm64/base.conf; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d setup; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d build; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d install; \
@@ -137,7 +143,7 @@ ifeq ($(shell arch),x86_64)
 	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
 	export LIBC=gnu; \
-	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
+	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar kmod nfs-common pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/../tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/agent/target/x86_64-unknown-linux-gnu/release/kata-agent"; \
 	cd rootfs-builder; \
@@ -157,12 +163,14 @@ ifeq ($(shell arch),aarch64)
 	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
 	export LIBC=gnu; \
-	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
+	export DEBUG=true; \
+	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar nfs-common kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/../tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/agent/target/aarch64-unknown-linux-gnu/release/kata-agent"; \
 	cd rootfs-builder; \
 	sudo -E ./rootfs.sh ubuntu; \
 	cd ..; \
+	sudo -E mkdir -p rootfs-builder/rootfs/etc/systemd/system; \
 	sudo -E cp ../../src/agent/kata-agent.service rootfs-builder/rootfs/etc/systemd/system/; \
 	sudo -E cp ../../src/agent/kata-containers.target rootfs-builder/rootfs/etc/systemd/system/; \
 	sudo -E ./image-builder/image_builder.sh rootfs-builder/rootfs; \

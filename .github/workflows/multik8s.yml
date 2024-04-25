@@ -1,4 +1,6 @@
 name: multik8s
+permissions:
+  contents: write
 
 on:
   push:

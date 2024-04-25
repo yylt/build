@@ -1,4 +1,6 @@
 name: nginx-ingress
+permissions:
+  contents: write
 
 on:
   push:

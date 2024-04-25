@@ -1,4 +1,6 @@
 name: kubeovn
+permissions:
+  contents: write
 
 on:
   push:

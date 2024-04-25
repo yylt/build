@@ -1,4 +1,6 @@
 name: nginx-base
+permissions:
+  contents: write
 
 on:
   push:

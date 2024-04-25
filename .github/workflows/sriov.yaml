@@ -1,4 +1,6 @@
 name: sriov
+permissions:
+  contents: write
 on:
   push:
     branches: [ sriov ]

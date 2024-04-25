@@ -1,4 +1,6 @@
 name: fio
+permissions:
+  contents: write
 
 on:
   push:
