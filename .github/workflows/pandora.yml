@@ -1,4 +1,6 @@
 name: pandora
+permissions:
+  contents: write
 on:
   push:
     branches: [ pandora ]

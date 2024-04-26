@@ -1,4 +1,6 @@
 name: gw-api
+permissions:
+  contents: write
 on:
   push:
     branches: [ gw-api ]

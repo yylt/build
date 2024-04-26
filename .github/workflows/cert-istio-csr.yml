@@ -1,4 +1,6 @@
 name: istio-csr
+permissions:
+  contents: write
 on:
   push:
     branches: [ istio-csr ]

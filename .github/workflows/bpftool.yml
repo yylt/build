@@ -1,4 +1,6 @@
 name: bpftool
+permissions:
+  contents: write
 on:
   push:
     branches: [ bpftool ]

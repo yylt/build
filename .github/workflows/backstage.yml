@@ -1,4 +1,6 @@
 name: backstage
+permissions:
+  contents: write
 
 on:
   push:

@@ -1,4 +1,6 @@
 name: runner
+permissions:
+  contents: write
 on:
   push:
     branches: [ runner ]

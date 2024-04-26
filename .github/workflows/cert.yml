@@ -1,4 +1,6 @@
 name: cert
+permissions:
+  contents: write
 on:
   push:
     branches: [ cert ]

@@ -1,4 +1,6 @@
 name: falco
+permissions:
+  contents: write
 on:
   push:
     branches: [ falco-src ]

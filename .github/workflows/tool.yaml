@@ -1,4 +1,6 @@
 name: tool
+permissions:
+  contents: write
 
 on:
   push:

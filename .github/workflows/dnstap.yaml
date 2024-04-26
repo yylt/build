@@ -1,4 +1,6 @@
 name: dnstap
+permissions:
+  contents: write
 on:
   push:
     branches: [ dnstap ]

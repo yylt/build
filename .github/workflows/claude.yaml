@@ -1,4 +1,6 @@
 name: claude
+permissions:
+  contents: write
 
 on:
   push:

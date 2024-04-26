@@ -1,4 +1,6 @@
 name: metrics-server
+permissions:
+  contents: write
 on:
   push:
     branches: [ metrics-server ]

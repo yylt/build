@@ -1,4 +1,6 @@
 name: weixin
+permissions:
+  contents: write
 
 on:
   push:
