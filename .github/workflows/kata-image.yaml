@@ -68,9 +68,9 @@ jobs:
         IMAGE_TAG: ${{ steps.date.outputs.date }}
 
     - name: WeChat Work notification
-      uses: chf007/action-wechat-work@master
+      uses: chf007/action-wechat-work@1.0.8
       env:
-        WECHAT_WORK_BOT_WEBHOOK: ${{secrets.WEWORK_ECRGROUP_BUILD}}
+        WECHAT_WORK_BOT_WEBHOOK: ${{ secrets.WEWORK_ECRGROUP_BUILD }}
       with:
         msgtype: text
         content: |

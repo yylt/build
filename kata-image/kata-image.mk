@@ -126,7 +126,13 @@ ifeq ($(shell arch),aarch64)
 	cd ../tools/packaging/kernel; \
 	sudo -E echo "" >> configs/fragments/arm64/base.conf; \
 	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFS_V4=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFS_V3=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFS_V4_1=y" >> configs/fragments/arm64/base.conf; \
 	sudo -E echo "CONFIG_NFS_COMMON=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFSD=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFSD_V3=y" >> configs/fragments/arm64/base.conf; \
+	sudo -E echo "CONFIG_NFSD_V4=y" >> configs/fragments/arm64/base.conf; \
 	sudo -E echo "" >> configs/fragments/arm64/base.conf; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d setup; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d build; \
@@ -163,13 +169,10 @@ ifeq ($(shell arch),aarch64)
 	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
 	export LIBC=gnu; \
-	export DEBUG=true; \
 	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar nfs-common kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/../tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/agent/target/aarch64-unknown-linux-gnu/release/kata-agent"; \
-	cd rootfs-builder; \
-	sudo -E ./rootfs.sh ubuntu; \
-	cd ..; \
+	sudo -E ./rootfs-builder/rootfs.sh  ubuntu; \
 	sudo -E mkdir -p rootfs-builder/rootfs/etc/systemd/system; \
 	sudo -E cp ../../src/agent/kata-agent.service rootfs-builder/rootfs/etc/systemd/system/; \
 	sudo -E cp ../../src/agent/kata-containers.target rootfs-builder/rootfs/etc/systemd/system/; \
@@ -198,21 +201,10 @@ ifeq ($(shell arch),aarch64)
 endif
 
 docker-image:
-ifeq ($(shell arch),x86_64)
 	sudo -E docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
-endif
-ifeq ($(shell arch),aarch64)
-	sudo -E docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
-	# docker buildx build --platform=linux/arm64 -t $(IMAGE_NAME):$(IMAGE_TAG) -f Dockerfile .
-endif
 
 docker-push: docker-image
-ifeq ($(shell arch),x86_64)
 	sudo -E docker push $(IMAGE_NAME):$(IMAGE_TAG)
-endif
-ifeq ($(shell arch),aarch64)
-	sudo -E docker push $(IMAGE_NAME):$(IMAGE_TAG)
-endif
 
 clean:
 	rm -f $(CONTAINERD_SHIM_NAME) $(ECR_RUNTIME) $(CONFIG_FILE_NAME) ecr-containers.img vmlinuz.container
