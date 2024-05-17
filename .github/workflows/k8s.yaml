@@ -9,7 +9,7 @@ on:
 env:
   REPO: easystack/kubernetes
   PROJECT: kubernetes
-  BRANCH: v1.27.6-es
+  BRANCH: v1.28.2-es
   Dockerfile: Dockerfile-k8s
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     - name: Set up Go 
       uses: actions/setup-go@v4
       with:
-        go-version: '^1.21'
+        go-version: '^1.22'
 
     - name: install arm tools
       run: |
@@ -61,10 +61,10 @@ jobs:
         export KUBE_GIT_VERSION=${{ env.BRANCH }}
 
         export KUBE_BUILD_PLATFORMS=linux/arm64
-        make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
+        make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl #cloud-controller-manager
 
-        # export KUBE_BUILD_PLATFORMS=linux/amd64
-        # make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl cloud-controller-manager
+        export KUBE_BUILD_PLATFORMS=linux/amd64
+        make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl #cloud-controller-manager
         tree _output
 
     - name: Login to DockerHub
@@ -78,7 +78,7 @@ jobs:
         cd ${{ env.PROJECT }}
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
-          --platform linux/arm64 \
+          --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
           --tag yylt/hyperkube:${{ steps.date.outputs.date }} \
           --file ../${{ env.Dockerfile }} .
