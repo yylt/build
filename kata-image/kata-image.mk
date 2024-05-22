@@ -12,6 +12,7 @@
 		package \
 		clean
 
+
 CONTAINERD_SHIM_NAME ?= containerd-shim-ecr-v2
 ECR_RUNTIME ?= ecr-runtime
 CONFIG_FILE_NAME ?= configuration.toml
@@ -169,6 +170,7 @@ ifeq ($(shell arch),aarch64)
 	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
 	export LIBC=gnu; \
+	export DEBUG=true; \
 	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar nfs-common kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/../tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/agent/target/aarch64-unknown-linux-gnu/release/kata-agent"; \
@@ -185,7 +187,7 @@ agent: package
 ifeq ($(shell arch),x86_64)
 	# make -C $(AGENT_DIR) clean
 	rustup target add x86_64-unknown-linux-musl;
-	LIBC=gnu make -C $(AGENT_DIR) kata-agent
+	LIBC=gnu DEBUG=true make -C $(AGENT_DIR) kata-agent
 	make -C $(AGENT_DIR) kata-agent.service
 endif
 
@@ -196,7 +198,7 @@ ifeq ($(shell arch),aarch64)
 	# export PATH=$$PATH:"$$HOME/.cargo/bin"; \
 	# rustup target add aarch64-unknown-linux-gnu; \
 	# rustup component add rustfmt clippy; \
-	LIBC=gnu make -C $(AGENT_DIR) SECCOMP=no kata-agent; \
+	LIBC=gnu DEBUG=true make -C $(AGENT_DIR) SECCOMP=no kata-agent; \
 	make -C $(AGENT_DIR) kata-agent.service
 endif
 

@@ -23,7 +23,7 @@ jobs:
       matrix:
         os: 
         - self-hosted
-        - ubuntu-22.04
+        #- ubuntu-22.04
     steps:
     - uses: actions-rs/toolchain@v1
       with:
@@ -32,7 +32,14 @@ jobs:
 
     - name: Get current date
       id: date
-      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+      run: |
+        echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+        ARCH=$(uname -m)
+        if [ "$ARCH" = "x86_64" ]; then
+          echo "::set-output name=amd64::${{ env.REGISTRY_NAME }}/yylt/amd64-ecr-deploy"
+        else
+          echo "::set-output name=arm64::${{ env.REGISTRY_NAME }}/yylt/arm64-ecr-deploy"
+        fi
 
     - name: Set up Go 1.22
       uses: actions/setup-go@v4
@@ -81,6 +88,12 @@ jobs:
       shell: bash
       env:
         WEBHOOK: ${{ secrets.WEWORK_ECRGROUP_BUILD }}
+        DATA: ${{ steps.date.outputs.date }}
+        AMD64: ${{ steps.date.outputs.amd64 }}
+        ARM64: ${{ steps.date.outputs.arm64 }}
       run: |
+        echo "data: $DATA" 
+        echo "amd64: $AMD64"
+        echo "arm64: $ARM64"
         data="{\"msgtype\":\"text\",\"text\":{\"content\":\"ecr_deploy 编译完成, 见 https://github.com/yylt?tab=packages\"}}"
-        curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
+        #curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
