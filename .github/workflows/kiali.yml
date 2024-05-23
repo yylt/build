@@ -1,6 +1,6 @@
 name: kiali
 permissions:
-  contents: write
+  contents: read
 on:
   push:
     branches: [ kiali ]

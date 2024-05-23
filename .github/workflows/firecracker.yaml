@@ -1,11 +1,9 @@
-name: firecracker rootfs 
+name: firecracker 
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ fc ]
-  pull_request:
     branches: [ fc ]
 
 env:

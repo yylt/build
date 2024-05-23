@@ -1,0 +1,27 @@
+name: test
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ test ]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Set date
+      shell: bash
+      id: data
+      run: |
+        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
+
+    - name: test data
+      run: |
+        echo "data: ${{ steps.data.outputs.date }}"

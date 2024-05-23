@@ -1,6 +1,6 @@
 name: cephcsi
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

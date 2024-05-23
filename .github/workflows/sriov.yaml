@@ -1,10 +1,8 @@
 name: sriov
 permissions:
-  contents: write
+  contents: read
 on:
   push:
-    branches: [ sriov ]
-  pull_request:
     branches: [ sriov ]
 
 env:

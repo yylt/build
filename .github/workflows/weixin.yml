@@ -1,6 +1,6 @@
 name: weixin
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

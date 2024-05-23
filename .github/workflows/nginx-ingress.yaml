@@ -1,6 +1,6 @@
 name: nginx-ingress
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

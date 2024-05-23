@@ -1,6 +1,6 @@
 name: cert
 permissions:
-  contents: write
+  contents: read
 on:
   push:
     branches: [ cert ]

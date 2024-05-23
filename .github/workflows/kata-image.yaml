@@ -5,7 +5,7 @@ on:
     branches: [ kata ]
 
 permissions: # added using https://github.com/step-security/secure-workflows
-  contents: write
+  contents: read
 
 env:
   GO111MODULE: on 

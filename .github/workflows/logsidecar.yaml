@@ -1,10 +1,8 @@
 name: logsidecar
 permissions:
-  contents: write
+  contents: read
 on:
   push:
-    branches: [ logsidecar ]
-  pull_request:
     branches: [ logsidecar ]
 
 env:

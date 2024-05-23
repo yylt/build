@@ -1,11 +1,9 @@
 name: gvisor
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ gvisor ]
-  pull_request:
     branches: [ gvisor ]
 
 env:

@@ -1,11 +1,11 @@
 name: copy images
 permissions:
-  contents: write
+  contents: read
+  
 on:
   push:
     branches: [ copy ]
-  pull_request:
-    branches: [ copy ]
+
 env:
   USER: yylt
 
