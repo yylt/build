@@ -1,11 +1,9 @@
 name: multik8s
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ multik8s ]
-  pull_request:
     branches: [ multik8s ]
 
 env:

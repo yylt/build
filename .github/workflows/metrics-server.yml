@@ -1,10 +1,8 @@
 name: metrics-server
 permissions:
-  contents: write
+  contents: read
 on:
   push:
-    branches: [ metrics-server ]
-  pull_request:
     branches: [ metrics-server ]
 
 env:

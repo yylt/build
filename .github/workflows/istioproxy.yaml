@@ -1,6 +1,6 @@
 name: istioproxy
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

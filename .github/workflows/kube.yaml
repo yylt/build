@@ -1,6 +1,6 @@
 name: kube
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

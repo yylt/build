@@ -1,6 +1,6 @@
 name: tool
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

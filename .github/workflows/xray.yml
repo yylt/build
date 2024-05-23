@@ -1,11 +1,9 @@
 name: xray
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ xray ]
-  pull_request:
     branches: [ xray ]
 
 env:

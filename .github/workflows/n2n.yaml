@@ -1,6 +1,6 @@
 name: n2n
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

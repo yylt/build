@@ -1,11 +1,9 @@
 name: falcosidekick
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ falco ]
-  pull_request:
     branches: [ falco ]
 
 env:

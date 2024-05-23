@@ -1,10 +1,8 @@
 name: dnsperf
 permissions:
-  contents: write
+  contents: read
 on:
   push:
-    branches: [ dnsperf ]
-  pull_request:
     branches: [ dnsperf ]
 
 env:

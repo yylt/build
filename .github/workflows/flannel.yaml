@@ -1,6 +1,6 @@
 name: flannel
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:

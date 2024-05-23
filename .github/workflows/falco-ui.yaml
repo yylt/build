@@ -1,11 +1,9 @@
 name: falco ui
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
-    branches: [ falco-ui ]
-  pull_request:
     branches: [ falco-ui ]
 
 env:
