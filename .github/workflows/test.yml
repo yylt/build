@@ -10,18 +10,49 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: 
+        - self-hosted
+        #- ubuntu-22.04
+    outputs:
+      date: ${{ steps.date.outputs.date }}
+      amd64: ${{ steps.date.outputs.amd64 }}
+      arm64: ${{ steps.date.outputs.arm64 }}
     steps:
-
-    - name: Check out repo code
-      uses: actions/checkout@v2
-
-    - name: Set date
+    - name: Get current date
+      id: date
       shell: bash
-      id: data
       run: |
+        set -x
         echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
+        ARCH=$(uname -m)
+        if [[ "$ARCH" == "x86_64" ]]; then
+          echo "amd64=amd64" >> "$GITHUB_OUTPUT"
+        else
+          echo "arm64=arm64" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: test data
+  notify:
+    name: notify 
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    needs: [build]
+
+    steps:
+    - name: test notify
+      shell: bash
+      env:
+        DATE: ${{needs.build.outputs.date}}
+        AMD64: ${{needs.build.outputs.amd64}}
+        ARM64: ${{needs.build.outputs.arm64}}
       run: |
-        echo "data: ${{ steps.data.outputs.date }}"
+        text="DATE $DATE"
+        if [[ "$AMD64" != "" ]];then
+          text="$text\nimage: $AMD64:$DATE"
+        fi
+        if [[ "$ARM64" != "" ]];then
+          text="$text\nimage: $ARM64:$DATE"
+        fi
+        echo "text: $text"
