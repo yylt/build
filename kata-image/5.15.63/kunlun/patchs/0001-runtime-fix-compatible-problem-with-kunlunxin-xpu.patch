@@ -1,0 +1,52 @@
+From f096b4b2fbda380027cca4e1cb2b020136ae0504 Mon Sep 17 00:00:00 2001
+From: zhengxiaowei02 <zhengxiaowei02@baidu.com>
+Date: Thu, 2 Mar 2023 09:53:55 +0800
+Subject: [PATCH] runtime: fix compatible problem with kunlunxin xpu
+
+Signed-off-by: zhengxiaowei02 <zhengxiaowei02@baidu.com>
+---
+ .../nvidia/cloud-native/go-nvlib/pkg/nvpci/nvpci.go   | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/src/runtime/vendor/gitlab.com/nvidia/cloud-native/go-nvlib/pkg/nvpci/nvpci.go b/src/runtime/vendor/gitlab.com/nvidia/cloud-native/go-nvlib/pkg/nvpci/nvpci.go
+index 61a8bd302..5f3008c65 100644
+--- a/src/runtime/vendor/gitlab.com/nvidia/cloud-native/go-nvlib/pkg/nvpci/nvpci.go
++++ b/src/runtime/vendor/gitlab.com/nvidia/cloud-native/go-nvlib/pkg/nvpci/nvpci.go
+@@ -31,6 +31,8 @@ const (
+ 	PCIDevicesRoot = "/sys/bus/pci/devices"
+ 	// PCINvidiaVendorID represents PCI vendor id for NVIDIA
+ 	PCINvidiaVendorID uint16 = 0x10de
++	// PCIKunlunxinVendorID represents PCI vendor id for KUNLUNXIN
++	PCIKunlunxinVendorID uint16 = 0x1d22
+ 	// PCIVgaControllerClass represents the PCI class for VGA Controllers
+ 	PCIVgaControllerClass uint32 = 0x030000
+ 	// PCI3dControllerClass represents the PCI class for 3D Graphics accellerators
+@@ -75,6 +77,11 @@ type NvidiaPCIDevice struct {
+ 	Resources MemoryResources
+ }
+
++// IsXPUController if vendor id == 0x1d22
++func (d *NvidiaPCIDevice) IsXPUController() bool {
++	return d.Vendor == PCIKunlunxinVendorID
++}
++
+ // IsVGAController if class == 0x300
+ func (d *NvidiaPCIDevice) IsVGAController() bool {
+ 	return d.Class == PCIVgaControllerClass
+@@ -92,7 +99,7 @@ func (d *NvidiaPCIDevice) IsNVSwitch() bool {
+
+ // IsGPU either VGA for older cards or 3D for newer
+ func (d *NvidiaPCIDevice) IsGPU() bool {
+-	return d.IsVGAController() || d.Is3DController()
++	return d.IsVGAController() || d.Is3DController() || d.IsXPUController()
+ }
+
+ // IsResetAvailable some devices can be reset without rebooting,
+@@ -169,7 +176,7 @@ func NewDevice(devicePath string) (*NvidiaPCIDevice, error) {
+ 		return nil, fmt.Errorf("unable to convert vendor string to uint16: %v", vendorStr)
+ 	}
+
+-	if uint16(vendorID) != PCINvidiaVendorID {
++	if uint16(vendorID) != PCINvidiaVendorID && uint16(vendorID) != PCIKunlunxinVendorID {
+ 		return nil, nil
+ 	}
