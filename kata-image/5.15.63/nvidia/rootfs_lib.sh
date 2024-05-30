@@ -1,19 +1,35 @@
-# kernel must 5.15.63 version 
+# Copyright (c) 2024 yylt.
+#
+# SPDX-License-Identifier: Apache-2.0
 
-melx_build() {
+# notice: kernel must 5.15.63 version 
+
+nvidia_build() {
 	local rootfs_dir=$1
 
 	local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 
 	rootfstmp="${rootfs_dir}/tmp"
 
 	mkdir -p "${rootfstmp}" 
 
-	# 拷贝 install.sh
 	cp "$script_dir/install.sh" "$rootfstmp"
 
-	make dep-pkg
+	# 准备文件,注意 nvidia文件,deb文件 需提前放到本目录
+	cp $script_dir/NVIDIA*.run "$rootfstmp"
+	cp $script_dir/linux*.deb "$rootfstmp"
+
+	# 准备 proc 目录，检测 /proc/cpuinfo 
+	mount -t proc -o ro none $rootfs_dir/proc
+	mount -o bind,ro /dev ${rootfs_dir}/dev
+	mount -t devpts none ${rootfs_dir}/dev/pts
+	chroot "${rootfs_dir}" /usr/bin/bash "/tmp/install.sh"
+
+	umount ${rootfs_dir}/proc
+	umount ${rootfs_dir}/dev/pts
+	umount ${rootfs_dir}/dev
+
+	rm -rf "${rootfstmp}"
 }
 
 build_rootfs() {
@@ -28,15 +44,16 @@ aptsources=Ubuntu
 bootstrap=Ubuntu
 
 [Ubuntu]
-source=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/
+source=$REPO_URL
 keyring=ubuntu-keyring
 components=main restricted universe multiverse
-suite=jammy
+suite=jammy jammy-updates
 packages=$PACKAGES $EXTRA_PKGS 
 EOF
+
 	multistrap -a "$DEB_ARCH" -d "$rootfs_dir" -f "$multistrap_conf"
 	
-	melx_build "$rootfs_dir"
+	nvidia_build "$rootfs_dir"
 	rm -rf "$rootfs_dir/var/run"
 	ln -s /run "$rootfs_dir/var/run"
 	cp --remove-destination /etc/resolv.conf "$rootfs_dir/etc"

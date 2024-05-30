@@ -43,7 +43,7 @@ aptsources=Ubuntu
 bootstrap=Ubuntu
 
 [Ubuntu]
-source=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/
+source=$REPO_URL
 keyring=ubuntu-keyring
 components=main restricted universe multiverse
 suite=jammy

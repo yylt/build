@@ -1,21 +1,25 @@
-# Copyright (c) 2018 Yash Jain, 2022 IBM Corp.
+# Copyright (c) 2024 Yylt.
 #
 # SPDX-License-Identifier: Apache-2.0
 
 OS_NAME=ubuntu
-# This should be Ubuntu's code name, e.g. "focal" (Focal Fossa) for 20.04
 OS_VERSION=jammy
 
-PACKAGES="chrony iptables bash perl-modules perl-base apt-utils bzip2 gcc automake libltdl-dev dh-python build-essential m4 chrpath make pciutils bzip2 swig quilt kmod python3-distutils autotools-dev debhelper graphviz dpatch perl autoconf pkg-config lsof dh-autoreconf python3 ethtool"
+PACKAGES="apt apt-utils bash bison build-essential bzip2 ca-certificates chrony coreutils \
+curl dpkg dkms dialog ethtool flex gcc iptables kmod libc-dev libc6-dev make pciutils pkg-config tar"
+
 [ "$AGENT_INIT" = no ] && PACKAGES+=" init"
-[ "$SECCOMP" = yes ] && PACKAGES+=" libseccomp2"
+
 REPO_URL=http://ports.ubuntu.com
 
 case "$ARCH" in
-	aarch64) DEB_ARCH=arm64;;
+	aarch64) DEB_ARCH=arm64; REPO_URL=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports ;;
 	ppc64le) DEB_ARCH=ppc64el;;
 	s390x) DEB_ARCH="$ARCH";;
-	x86_64) DEB_ARCH=amd64; REPO_URL=http://archive.ubuntu.com/ubuntu;;
+	x86_64) DEB_ARCH=amd64; 
+		# REPO_URL=http://archive.ubuntu.com/ubuntu 
+		REPO_URL=https://mirrors.tuna.tsinghua.edu.cn/ubuntu
+	;;
 	*) die "$ARCH not supported"
 esac
 

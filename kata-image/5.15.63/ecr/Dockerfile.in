@@ -1,4 +1,4 @@
-# Copyright (c) 2024 yylt.
+# Copyright (c) 2018 Yash Jain, 2022 IBM Corp.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -20,7 +20,7 @@ RUN apt-get update && \
     echo "gcc-$gcc_arch-linux-gnu libc6-dev-$libc_arch-cross")) \
     git \
     make \
-    dpkg \
     multistrap \
     musl-tools \
     protobuf-compiler
+    

@@ -11,10 +11,10 @@ PACKAGES="chrony iptables bash"
 REPO_URL=http://ports.ubuntu.com
 
 case "$ARCH" in
-	aarch64) DEB_ARCH=arm64;;
+	aarch64) DEB_ARCH=arm64; REPO_URL=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports ;;
 	ppc64le) DEB_ARCH=ppc64el;;
 	s390x) DEB_ARCH="$ARCH";;
-	x86_64) DEB_ARCH=amd64; REPO_URL=http://archive.ubuntu.com/ubuntu;;
+	x86_64) DEB_ARCH=amd64; REPO_URL=http://archive.ubuntu.com/ubuntu ;;
 	*) die "$ARCH not supported"
 esac
 

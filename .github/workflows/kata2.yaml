@@ -13,11 +13,15 @@ env:
   PROJECT: kata-containers
   BRANCH: stable-2.5
   REGISTRY_NAME: ghcr.yylt.gq
+  # MLNX_X64_URL: https://content.mellanox.com/ofed/MLNX_OFED-5.8-4.1.5.0/MLNX_OFED_LINUX-5.8-4.1.5.0-ubuntu22.04-x86_64.tgz
+  # NVIDIA_X64_URL: https://us.download.nvidia.com/tesla/515.48.07/NVIDIA-Linux-x86_64-515.48.07.run  
+  MLNX_X64_URL: ${{ secrets.MLNX_X64_URL }}  
+  NVIDIA_X64_URL: ${{ secrets.NVIDIA_X64_URL }} 
 
 jobs:
-  build_selfhost:
-    name: Build kernel and image for x64
-    runs-on: [self-hosted, linux, x64]
+  build_arm64_action:
+    name: Build arm64 kernel and image
+    runs-on: [self-hosted, linux, arm64]
     outputs:
       date: ${{ steps.date.outputs.date }}
       amd64: ${{ steps.date.outputs.amd64 }}
@@ -57,27 +61,21 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Build kata image
+    - name: Build ecr image
       run: |
         cd ${{ env.PROJECT }}
-        make -f ../kata-image/kata-image.mk target
-      env:
-        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
-        IMAGE_TAG: ${{ steps.date.outputs.date }}
-        TARGET: ""
+        make -f ../kata-image/kata-image.mk agent
+        TARGET=ecr make -f ../kata-image/kata-image.mk target
+        TARGET=kunlun make -f ../kata-image/kata-image.mk target
 
-    - name: Build mellanox image
+    - name: list file kata-image
       run: |
-        cd ${{ env.PROJECT }}
-        make -f ../kata-image/kata-image.mk target
-      env:
-        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
-        IMAGE_TAG: ${{ steps.date.outputs.date }}
-        TARGET: "mellanox"
+        ls -lht kata-image
+        
 
-  build_action:
-    name: Build kernel and image for x64
-    runs-on: ubuntu-22.04
+  build_x64_action:
+    name: Build x64 kernel and image
+    runs-on: [self-hosted, linux, x64] # ubuntu-22.04
     outputs:
       date: ${{ steps.date.outputs.date }}
       amd64: ${{ steps.date.outputs.amd64 }}
@@ -117,15 +115,17 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Build original image
+    - name: Build image and kernel
       run: |
         cd ${{ env.PROJECT }}
-        make -f ../kata-image/kata-image.mk build-image 
-        make -f ../kata-image/kata-image.mk build-kernel
-      env:
-        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
-        IMAGE_TAG: ${{ steps.date.outputs.date }}
-        TARGET: ""
+        make -f ../kata-image/kata-image.mk agent
+        TARGET=ecr make -f ../kata-image/kata-image.mk target
+        TARGET=nvidia make -f ../kata-image/kata-image.mk target
+        TARGET=mellanox make -f ../kata-image/kata-image.mk target
+        
+    - name: list file kata-image
+      run: |
+        ls -lht kata-image
 
   # notify:
   #   name: notify 

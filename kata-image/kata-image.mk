@@ -24,7 +24,7 @@ IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
 LAST_COMMIT_ID ?= $(shell git rev-parse HEAD)
 IMAGE_TAG ?= v$(shell cat ./VERSION)-$(LAST_COMMIT_ID)
 
-TARGET ?= "" # kunlun, nvidia, mellanox or ''
+TARGET ?= "" # kunlun, nvidia, mellanox or ecr
 
 ifeq ($(shell arch),aarch64)
 	# aarch64 环境重新命名 IMAGE_NAME 结构
@@ -32,12 +32,12 @@ ifeq ($(shell arch),aarch64)
 endif
 
 
-all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push target
+all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push 
 
-target: agent
-	# workdir is $current/../kata-containers
+.PHONY: target
+target: 
 	chmod +x ../kata-image/build.sh
-	sudo -E ../kata-image/build.sh -t $(TARGET) -s $(PWD)
+	sudo -E ../kata-image/build.sh -k "5.15.63" -s "$(PWD)" -t "$(TARGET)"
 
 containerd-shim-v2:
 	make -C $(SOURCE_DIR) containerd-shim-v2; \
@@ -129,8 +129,9 @@ build-image: agent
 	dir=$(PWD); \
 	arch=$(shell uname -m); \
 	cd ./tools/osbuilder; \
-	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
+	sed -i '27,29d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
+	export SECCOMP=no; \
 	export LIBC=gnu; \
 	export DEBUG=true; \
 	export EXTRA_PKGS="coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \

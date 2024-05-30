@@ -20,6 +20,9 @@ mkdir -p $hookpath
 
 cat > $hookpath/xpu-container-toolkit.sh <<-'EOF'
 #!/bin/bash -x
+
+chmod 666 /dev/xpu*
+
 /usr/bin/xpu-container-toolkit -debug $@
 EOF
 
