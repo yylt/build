@@ -1,22 +1,35 @@
 
-FROM golang:1.18 as builder
+FROM golang:1.22 as builder
 WORKDIR /workspace
 COPY . .
 RUN cd sriov-cni && make build && \
     cd ../ib-sriov-cni && make build && \
     cd ../whereabouts && make build
 
-FROM alpine:3
+FROM alpine:3.15 as plugin
+WORKDIR /plugins
+
+ARG FLANNEL_VERSION=v1.4.1
+ARG VERSION=v1.4.0
+
 RUN apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
         aarch64) ARCH='arm64' ;; \
         x86_64) ARCH='amd64' ;; \
     esac; \
-    wget -P / https://github.com/containernetworking/plugins/releases/download/v1.2.0/cni-plugins-linux-$ARCH-v1.2.0.tgz
+    wget -O flannel https://github.com/flannel-io/cni-plugin/releases/download/${FLANNEL_VERSION}-flannel1/flannel-$ARCH && \
+    chmod +x flannel && \
+    wget -q -O - https://github.com/containernetworking/plugins/releases/download/${VERSION}/cni-plugins-linux-$ARCH-${VERSION}.tgz | tar xzf - 
+
+
+FROM alpine:3.15
+
+COPY --from=plugin /plugins /plugins
 COPY --from=builder /workspace/ib-sriov-cni/build/ib-sriov / 
 COPY --from=builder /workspace/sriov-cni/build/sriov / 
 COPY --from=builder /workspace/whereabouts/bin/whereabouts / 
 COPY --from=builder /workspace/whereabouts/bin/ip-control-loop /
+
 COPY --from=builder /workspace/scripts/entrypoint.sh / 
 COPY --from=builder /workspace/scripts/install.sh /
 
