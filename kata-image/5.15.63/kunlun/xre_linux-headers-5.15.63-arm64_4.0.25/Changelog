@@ -1,0 +1,123 @@
+v4.0
+- kunlun.ko同时支持KL1和KL2
+
+v3.9.0
+- 添加CGroup级别和ProcessLevel级别的内存隔离
+- 依据支持ProcessLevel进行调度抢占
+- 驱动升级为3位版本号
+- 升级xpu_smi
+  - 使用ctrlnode进行状态查询
+  - 容器内现在可以显式容器内的进程了，且容器内外区分pid显式
+- 文档更新
+- 处理HBM UCECC/Overhead异常
+- 添加cdnn_diag
+- 添加ota_upgrade_all.sh脚本
+- DMA Write 添加 fence，解决飞腾上由于DMA Write比较慢导致的DMA Read超时问题
+
+v3.8
+- 减少BAR0使用量至4M
+- xpu_malloc如果size为0，返回XPUERR_INVALID_PARAM
+- 更新全新的设备查询接口
+- 计算超时会将卡置为异常状态，并记录errtask/errinfo（errtask只做参考，并不总是准确）
+- XPURT_DISPATCH_MODE支持BATCH值
+- OTA工具更新NoDriver模式
+
+v3.7
+- KL1添加Event支持
+- XRE使用文档
+- 使用Pingpong缓存优化端到端DMA性能
+
+v3.6
+- SSE AXI异常后会进入auto reset（如果开启）
+- BUGFIX: PD1异常未正确处理
+
+v3.5
+- 驱动加载检查固件版本
+- 记录驱动加载jiffies
+- fix: XPU_SMI内存显式不一致问题
+- fix: RESET流程与TIMER冲突问题
+
+v3.4
+- 添加并默认使用Hybrid模式，改善xpu_wait阶段CPU利用率
+- soft_rst添加--no_pcie_init选项，配合22版本的fw，解决复位过程中pcie断连接（触发NMI）的问题
+- 解决DMA Coherence问题
+
+v3.3
+- FW训练HBM失败后，驱动会尝试多次重训练HBM
+- 添加xpu_br/xpu_bw接口
+- 添加运维相关proc文件，reset_count/errtask
+
+v3.2
+- run_sse_tc 工具添加 --reloac 选项支持
+
+v3.1
+- SN号支持64bit和32bit两种版本
+- 添加/proc/xpu/probe_error，展示未成功初始化的卡信息和错误信息
+- 添加基本的reset流程
+
+v3.0
+- 为设备文件添加设备信息查询接口，针对对3.0以后版本的驱动，SMI不再使用contrlnode作为查询接口，
+  而是通过xpu_device_list获取设备列表后依次查询
+- 添加交叉编译的选项
+
+v2.4
+- 修复一个Library中函数cache的BUG，在单进程多卡的情况下会引起错误
+
+v2.3
+- 使用密集中断模式，修复频繁升降频过程中可能导致的死机问题
+
+v2.2
+- 映射BAR的时候检查系统配置正确性
+- libxpurt自动搜索当前系统可见的xpu设备，同时支持XPU_VISIBLE_DEVICES系统变量指定
+- 更新SMI工具，默认显示内存用量，版本信息只显示两位
+- 调整output目录结构
+
+v2.0
+- 更新任务管理机制，使用Early-Wait机制，正常模式下不再使用Complete
+- 增大batch launch中一次下发kernel的限制
+- 解决进程未同步即退出的情况下，利用率无法归零的问题
+- 运行时库中添加版本检查
+
+v1.14
+- 添加 xpu_disp_set_profiling_mode() 接口，该模式下launch会变成同步，每个kernel执行完成后
+  可使用 xpu_last_kernel_exec_time() 获取执行时间
+- 改进 legacy 模式性能统计的准确性
+
+v1.13
+- 调整xpu_smi的输出格式，打印板卡型号、利用率等信息
+- 调整产出目录，release.sh脚本对产出进行了裁剪
+
+v1.12
+- kl1驱动支持自动升频
+- kl1驱动配置默认rounding mode
+- dummy event接口
+- BUG FIX：多线程launching一致性错误
+
+v1.10
+- BUG FIX：判断BAR匹配模式的逻辑错误，导致被认为是BAR_MATCH
+- freq 工具可以指定 devid
+
+v1.9.1
+- fix a memleak problem in driver
+- fix a problem with smp\_processor\_id()
+
+v1.9
+- 更新内存管理方式，添加CodeMemory区域；
+- iatu改为由firmware进行配置；
+- 更新和整理smi、run_sse_tc等rt提供的binary;
+- 更新驱动version接口，可准确获取major、minor、commit信息；
+
+v1.7
+- 统一launch接口，添加dispatch模式的选择，将原本的sse_launch, legacy_launch改为设置disp mode。
+
+v1.6.1
+- 添加python接口。
+
+v1.6.0
+- 支持使用模拟器作为runtime后端，使用模拟器计算kernel
+
+v1.5.0
+- 版本号方式更改，1.0.5==1.5.0
+
+v0.1
+- 在 MPW 上测试通过了寄存器读写

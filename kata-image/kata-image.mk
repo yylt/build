@@ -24,35 +24,29 @@ IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
 LAST_COMMIT_ID ?= $(shell git rev-parse HEAD)
 IMAGE_TAG ?= v$(shell cat ./VERSION)-$(LAST_COMMIT_ID)
 
+TARGET ?= "" # kunlun, nvidia, mellanox or ecr
+
 ifeq ($(shell arch),aarch64)
 	# aarch64 环境重新命名 IMAGE_NAME 结构
-	IMAGE_NAME = $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
+	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
 endif
 
-all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push
+
+all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push 
+
+.PHONY: target
+target: 
+	chmod +x ../kata-image/build.sh
+	sudo -E ../kata-image/build.sh -k "5.15.63" -s "$(PWD)" -t "$(TARGET)"
 
 containerd-shim-v2:
-ifeq ($(shell arch),x86_64)
-	make -C $(SOURCE_DIR) containerd-shim-v2
-	mv $(SOURCE_DIR)/containerd-shim-kata-v2 $(CONTAINERD_SHIM_NAME)
-endif
-
-
-ifeq ($(shell arch),aarch64)
 	make -C $(SOURCE_DIR) containerd-shim-v2; \
 	mv $(SOURCE_DIR)/containerd-shim-kata-v2 $(CONTAINERD_SHIM_NAME)
-endif
 
 ecr-runtime:
-ifeq ($(shell arch),x86_64)
 	make -C $(SOURCE_DIR) runtime
 	mv $(SOURCE_DIR)/kata-runtime $(ECR_RUNTIME)
-endif
 
-ifeq ($(shell arch),aarch64)
-	make -C $(SOURCE_DIR) runtime
-	mv $(SOURCE_DIR)/kata-runtime $(ECR_RUNTIME)
-endif
 
 # 根据架构不同生成安全容器配置文件
 generate-config:
@@ -69,7 +63,7 @@ ifeq ($(shell arch),x86_64)
 	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/usr/libexec/virtiofsd\"]' \
 	DEFSANDBOXCGROUPONLY="true" \
 	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"guest_hook_path\",\"kernel\",\"image\",\"enable_sriov\",\"scsi_scan_mod\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
-	mv $(SOURCE_DIR)/config/configuration-qemu.toml $(CONFIG_FILE_NAME)
+	mv $(SOURCE_DIR)/config/configuration-qemu.toml configuration.toml
 endif
 
 ifeq ($(shell arch),aarch64)
@@ -87,7 +81,7 @@ ifeq ($(shell arch),aarch64)
 	DEFAULTPFLASHES='[\"/usr/share/ecr/ecr-flash0.img\", \"/usr/share/ecr/ecr-flash1.img\"]' \
 	DEFAULTDISABLEIMAGENVDIMM="true" \
 	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"kernel\",\"image\",\"scsi_scan_mod\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
-	mv $(SOURCE_DIR)/config/configuration-qemu.toml $(CONFIG_FILE_NAME)
+	mv $(SOURCE_DIR)/config/configuration-qemu.toml configuration.toml
 endif
 
 package:
@@ -111,111 +105,49 @@ package:
 		bc
 
 build-kernel: package
-
-ifeq ($(shell arch),x86_64)
 	cd ./tools/packaging/kernel; \
-	sudo -E echo "" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V2=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V3=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V3_ACL=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_SWAP=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_1=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_2=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_PNFS_FILE_LAYOUT=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_PNFS_FLEXFILE_LAYOUT=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_1_MIGRATION=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_SECURITY_LABEL=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "CONFIG_ROOT_NFS=y" >> configs/fragments/x86_64/base.conf; \
-	sudo -E echo "" >> configs/fragments/x86_64/base.conf; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -g nvidia -f -d setup; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -g nvidia -f -d build; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -g nvidia -f -d install; \
-	sudo -E cp /usr/share/kata-containers/vmlinux-5.15.63-96-nvidia-gpu ../../../ecr_deploy/vmlinuz.container
-endif
-
-ifeq ($(shell arch),aarch64)
-	cd ./tools/packaging/kernel; \
-	sudo -E echo "" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V2=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V3=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V3_ACL=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_SWAP=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_1=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_2=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_PNFS_FILE_LAYOUT=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_PNFS_FLEXFILE_LAYOUT=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_1_MIGRATION=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_NFS_V4_SECURITY_LABEL=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "CONFIG_ROOT_NFS=y" >> configs/fragments/arm64/base.conf; \
-	sudo -E echo "" >> configs/fragments/arm64/base.conf; \
+	sudo -E touch configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V2=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V3=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V3_ACL=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V4=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_SWAP=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V4_1=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V4_2=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_PNFS_FILE_LAYOUT=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_PNFS_FLEXFILE_LAYOUT=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V4_1_MIGRATION=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_NFS_V4_SECURITY_LABEL=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "CONFIG_ROOT_NFS=y" >> configs/fragments/common/nfs.conf; \
+	sudo -E echo "" >> configs/fragments/common/nfs.conf; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d setup; \
-	sudo -E ./build-kernel.sh -v 5.15.63 -f -d build; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d install; \
-	sudo -E cp /usr/share/kata-containers/vmlinuz.container ../../../ecr_deploy/vmlinuz.container
-endif
-
+	sudo -E cp /usr/share/kata-containers/vmlinuz.container  ../../../ecr_deploy/vmlinuz.container
 
 build-image: agent
-ifeq ($(shell arch),x86_64)
-	sudo -E apt install -y qemu-utils multistrap; \
 	dir=$(PWD); \
+	arch=$(shell uname -m); \
 	cd ./tools/osbuilder; \
-	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
+	sed -i '27,29d' rootfs-builder/ubuntu/Dockerfile.in; \
 	export USE_DOCKER=true; \
-	export LIBC=gnu; \
-	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar kmod nfs-common pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
-	export ROOTFS_DIR="$${dir}/tools/osbuilder/rootfs-builder/rootfs"; \
-	export AGENT_SOURCE_BIN="$${dir}/src/agent/target/x86_64-unknown-linux-gnu/release/kata-agent"; \
-	sudo -E ./rootfs-builder/rootfs.sh  ubuntu; \
-	mkdir -p rootfs-builder/rootfs/etc/systemd/system; \
-	sudo -E cp ../../src/agent/kata-agent.service rootfs-builder/rootfs/etc/systemd/system/; \
-	sudo -E cp ../../src/agent/kata-containers.target rootfs-builder/rootfs/etc/systemd/system/; \
-	sudo -E ./image-builder/image_builder.sh rootfs-builder/rootfs; \
-	sudo -E cp kata-containers.img ../../ecr_deploy/ecr-containers.img
-endif
-
-ifeq ($(shell arch),aarch64) 
-	sudo -E apt install -y qemu-utils multistrap; \
-	dir=$(PWD); \
-	cd ./tools/osbuilder; \
-	sed -i '27d' rootfs-builder/ubuntu/Dockerfile.in; \
-	export USE_DOCKER=true; \
+	export SECCOMP=no; \
 	export LIBC=gnu; \
 	export DEBUG=true; \
-	export EXTRA_PKGS="chrony coreutils gcc make curl gnupg  apt tar nfs-common kmod pkg-config libc-dev libc6-dev pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
+	export EXTRA_PKGS="coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/tools/osbuilder/rootfs-builder/rootfs"; \
-	export AGENT_SOURCE_BIN="$${dir}/src/agent/target/aarch64-unknown-linux-gnu/release/kata-agent"; \
+	export AGENT_SOURCE_BIN="$${dir}/src/agent/target/$$arch-unknown-linux-gnu/release/kata-agent"; \
 	sudo -E ./rootfs-builder/rootfs.sh  ubuntu; \
 	sudo -E mkdir -p rootfs-builder/rootfs/etc/systemd/system; \
 	sudo -E cp ../../src/agent/kata-agent.service rootfs-builder/rootfs/etc/systemd/system/; \
 	sudo -E cp ../../src/agent/kata-containers.target rootfs-builder/rootfs/etc/systemd/system/; \
-	sudo -E ./image-builder/image_builder.sh rootfs-builder/rootfs; \
+	sudo -E ./image-builder/image_builder.sh $${dir}/tools/osbuilder/rootfs-builder/rootfs; \
 	sudo -E cp kata-containers.img ../../ecr_deploy/ecr-containers.img
-endif
 
 
 agent: package
-ifeq ($(shell arch),x86_64)
-	# make -C $(AGENT_DIR) clean
-	rustup target add x86_64-unknown-linux-musl;
-	LIBC=gnu DEBUG=true make -C $(AGENT_DIR) kata-agent
+	LIBC=gnu DEBUG=true SECCOMP=no make -C $(AGENT_DIR) kata-agent; \
 	make -C $(AGENT_DIR) kata-agent.service
-endif
-
-ifeq ($(shell arch),aarch64)
-	# 注意：需要提前 clone kata-containers/tests 项目
-	# ../ci/install_musl.sh; \
-	# ../ci/install_rust.sh; \
-	# export PATH=$$PATH:"$$HOME/.cargo/bin"; \
-	# rustup target add aarch64-unknown-linux-gnu; \
-	# rustup component add rustfmt clippy; \
-	LIBC=gnu DEBUG=true make -C $(AGENT_DIR) SECCOMP=no kata-agent; \
-	make -C $(AGENT_DIR) kata-agent.service
-endif
 
 docker-image:
 	cd ecr_deploy; \

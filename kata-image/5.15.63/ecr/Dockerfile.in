@@ -1,0 +1,26 @@
+# Copyright (c) 2018 Yash Jain, 2022 IBM Corp.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+ARG IMAGE_REGISTRY=docker.io
+FROM ${IMAGE_REGISTRY}/ubuntu:@OS_VERSION@
+@SET_PROXY@
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get --no-install-recommends -y install \
+    ca-certificates \
+    curl \
+    g++ \
+    $(gcc_arch="@ARCH@" && [ "$(uname -m)" != "$gcc_arch" ] && ( \
+    libc_arch="$gcc_arch" && \
+    [ "$gcc_arch" = aarch64 ] && libc_arch=arm64; \
+    [ "$gcc_arch" = ppc64le ] && gcc_arch=powerpc64le && libc_arch=ppc64el; \
+    [ "$gcc_arch" = x86_64 ] && gcc_arch=x86-64 && libc_arch=amd64; \
+    echo "gcc-$gcc_arch-linux-gnu libc6-dev-$libc_arch-cross")) \
+    git \
+    make \
+    multistrap \
+    musl-tools \
+    protobuf-compiler
+    
