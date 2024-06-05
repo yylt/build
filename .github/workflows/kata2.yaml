@@ -12,33 +12,47 @@ env:
   GO111MODULE: on 
   PROJECT: kata-containers
   BRANCH: stable-2.5
-  REGISTRY_NAME: ghcr.yylt.gq
+  # image too big, failed to upload
+  REGISTRY_NAME: ghcr.io
+
+  CLOUD189_USER: ${{ secrets.CLOUD189_USER }}
+  CLOUD189_PASSWORD: ${{ secrets.CLOUD189_PASSWORD }}
   # MLNX_X64_URL: https://content.mellanox.com/ofed/MLNX_OFED-5.8-4.1.5.0/MLNX_OFED_LINUX-5.8-4.1.5.0-ubuntu22.04-x86_64.tgz
   # NVIDIA_X64_URL: https://us.download.nvidia.com/tesla/515.48.07/NVIDIA-Linux-x86_64-515.48.07.run  
   MLNX_X64_URL: ${{ secrets.MLNX_X64_URL }}  
   NVIDIA_X64_URL: ${{ secrets.NVIDIA_X64_URL }} 
 
 jobs:
-  build_arm64_action:
+  karm64:
     name: Build arm64 kernel and image
     runs-on: [self-hosted, linux, arm64]
     outputs:
-      date: ${{ steps.date.outputs.date }}
-      amd64: ${{ steps.date.outputs.amd64 }}
-      arm64: ${{ steps.date.outputs.arm64 }}
+      image: ${{ steps.data.outputs.image }}
     steps:
-    - name: Get current date
-      id: date
+    - name: Set Data
+      id: data
       shell: bash
       run: |
         set -x
-        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
-        ARCH=$(uname -m)
-        if [[ "$ARCH" == "x86_64" ]]; then
-          echo "amd64=${{ env.REGISTRY_NAME }}/yylt/amd64-ecr-deploy" >> "$GITHUB_OUTPUT"
+        tag=$(date +'%Y%m%d%H%M')
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+          arch=amd64
         else
-          echo "arm64=${{ env.REGISTRY_NAME }}/yylt/arm64-ecr-deploy" >> "$GITHUB_OUTPUT"
+          arch=arm64
         fi
+        echo "image=${{ env.REGISTRY_NAME }}/yylt/ecr_$arch:$tag" >> "$GITHUB_OUTPUT"
+    
+    - name: Cloud189 Check
+      run: |
+        set -ex
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+          url="https://github.com/gowsp/cloud189/releases/download/v0.6.0/cloud189_0.6.0_linux_amd64.tar.gz"
+        else
+          url="https://github.com/gowsp/cloud189/releases/download/v0.6.0/cloud189_0.6.0_linux_arm64.tar.gz"
+        fi
+        wget -q -O - "$url" | tar -xzf - 
+        mv cloud189 /usr/bin
+        cloud189 login -i ${{ env.CLOUD189_USER }} ${{ env.CLOUD189_PASSWORD }}
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -61,38 +75,52 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Build ecr image
+    - name: Build image and kernel
       run: |
         cd ${{ env.PROJECT }}
         make -f ../kata-image/kata-image.mk agent
         TARGET=ecr make -f ../kata-image/kata-image.mk target
         TARGET=kunlun make -f ../kata-image/kata-image.mk target
 
-    - name: list file kata-image
+    - name: Upload to cloud189
       run: |
-        ls -lht kata-image
-        
+        cd kata-image
+        ls -lht
+        find . -maxdepth 1 -type f -name "*.img" -exec cloud189 up {} /  \;
+        find . -maxdepth 1 -type f -name "*.container" -exec cloud189 up {} /  \;
 
-  build_x64_action:
+
+  kamd64:
     name: Build x64 kernel and image
     runs-on: [self-hosted, linux, x64] # ubuntu-22.04
     outputs:
-      date: ${{ steps.date.outputs.date }}
-      amd64: ${{ steps.date.outputs.amd64 }}
-      arm64: ${{ steps.date.outputs.arm64 }}
+      image: ${{ steps.data.outputs.image }}
     steps:
-    - name: Get current date
-      id: date
+    - name: Set Data
+      id: data
       shell: bash
       run: |
         set -x
-        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
-        ARCH=$(uname -m)
-        if [[ "$ARCH" == "x86_64" ]]; then
-          echo "amd64=${{ env.REGISTRY_NAME }}/yylt/amd64-ecr-deploy" >> "$GITHUB_OUTPUT"
+        tag=$(date +'%Y%m%d%H%M')
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+          arch=amd64
         else
-          echo "arm64=${{ env.REGISTRY_NAME }}/yylt/arm64-ecr-deploy" >> "$GITHUB_OUTPUT"
+          arch=arm64
         fi
+        echo "image=${{ env.REGISTRY_NAME }}/yylt/ecr_$arch:$tag" >> "$GITHUB_OUTPUT"
+    
+    
+    - name: Cloud189 Check
+      run: |
+        set -ex
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+          url="https://github.com/gowsp/cloud189/releases/download/v0.6.0/cloud189_0.6.0_linux_amd64.tar.gz"
+        else
+          url="https://github.com/gowsp/cloud189/releases/download/v0.6.0/cloud189_0.6.0_linux_arm64.tar.gz"
+        fi
+        wget -q -O - "$url" | tar -xzf - 
+        mv cloud189 /usr/bin
+        cloud189 login -i ${{ env.CLOUD189_USER }} ${{ env.CLOUD189_PASSWORD }}
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -123,32 +151,37 @@ jobs:
         TARGET=nvidia make -f ../kata-image/kata-image.mk target
         TARGET=mellanox make -f ../kata-image/kata-image.mk target
         
-    - name: list file kata-image
+    - name: Upload to cloud189
       run: |
-        ls -lht kata-image
+        cd kata-image
+        ls -lht
+        find . -maxdepth 1 -type f -name "*.img" -exec cloud189 up {} /  \;
+        find . -maxdepth 1 -type f -name "*.container" -exec cloud189 up {} /  \;
 
-  # notify:
-  #   name: notify 
-  #   runs-on: ubuntu-22.04
-  #   timeout-minutes: 5
-  #   needs: [build]
 
-  #   steps:
-  #   - name: WeChat Work notification
-  #     shell: bash
-  #     env:
-  #       DATE: ${{needs.build.outputs.date}}
-  #       AMD64: ${{needs.build.outputs.amd64}}
-  #       ARM64: ${{needs.build.outputs.arm64}}
-  #       WEBHOOK: ${{ secrets.WEWORK_ECRGROUP_BUILD }}
-  #     run: |
-  #       text="ecr_deploy 编译完成"
-  #       if [[ "$AMD64" != "" ]];then
-  #         text="$text\nimage: $AMD64:$DATE"
-  #       fi
-  #       if [[ "$ARM64" != "" ]];then
-  #         text="$text\nimage: $ARM64:$DATE"
-  #       fi
-  #       echo "text: $text"
-  #       data="{\"msgtype\":\"text\",\"text\":{\"content\":\"$text\"}}"
-  #       curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
+
+  notify:
+    name: notify 
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    needs: [ karm64, kamd64 ]
+
+    steps:
+    - name: WeChat Work notification
+      shell: bash
+      env:
+        AMD64: ${{ needs.kamd64.outputs.image }}
+        ARM64: ${{ needs.karm64.outputs.image }}
+        WEBHOOK: ${{ secrets.WEWORK_ECRGROUP_BUILD }}
+      run: |
+        text="ecr_kernel_image 编译完成."
+        if [[ "$AMD64" != "" ]];then
+          echo "image: $AMD64"
+        fi
+        if [[ "$ARM64" != "" ]];then
+          #text="$text\nimage: $ARM64"
+          echo "image: $ARM64"
+        fi
+        echo "text: $text"
+        data="{\"msgtype\":\"text\",\"text\":{\"content\":\"$text\"}}"
+        curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
