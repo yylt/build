@@ -19,7 +19,6 @@ CONFIG_FILE_NAME ?= ecr_deploy/configuration.toml
 SOURCE_DIR ?= src/runtime
 AGENT_DIR ?= src/agent
 REGISTRY_NAME ?= ghcr.io
-IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
 
 LAST_COMMIT_ID ?= $(shell git rev-parse HEAD)
 IMAGE_TAG ?= v$(shell cat ./VERSION)-$(LAST_COMMIT_ID)
@@ -27,8 +26,9 @@ IMAGE_TAG ?= v$(shell cat ./VERSION)-$(LAST_COMMIT_ID)
 TARGET ?= "" # kunlun, nvidia, mellanox or ecr
 
 ifeq ($(shell arch),aarch64)
-	# aarch64 环境重新命名 IMAGE_NAME 结构
 	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
+else
+	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
 endif
 
 
@@ -63,7 +63,7 @@ ifeq ($(shell arch),x86_64)
 	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/usr/libexec/virtiofsd\"]' \
 	DEFSANDBOXCGROUPONLY="true" \
 	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"guest_hook_path\",\"kernel\",\"image\",\"enable_sriov\",\"scsi_scan_mod\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
-	mv $(SOURCE_DIR)/config/configuration-qemu.toml configuration.toml
+	mv $(SOURCE_DIR)/config/configuration-qemu.toml $(CONFIG_FILE_NAME)
 endif
 
 ifeq ($(shell arch),aarch64)
@@ -81,7 +81,7 @@ ifeq ($(shell arch),aarch64)
 	DEFAULTPFLASHES='[\"/usr/share/ecr/ecr-flash0.img\", \"/usr/share/ecr/ecr-flash1.img\"]' \
 	DEFAULTDISABLEIMAGENVDIMM="true" \
 	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"kernel\",\"image\",\"scsi_scan_mod\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
-	mv $(SOURCE_DIR)/config/configuration-qemu.toml configuration.toml
+	mv $(SOURCE_DIR)/config/configuration-qemu.toml $(CONFIG_FILE_NAME)
 endif
 
 package:
@@ -105,6 +105,10 @@ package:
 		bc
 
 build-kernel: package
+ifeq ($(shell arch),aarch64)
+	cp -a tools/packaging/kernel/patches/5.15.x/arm-experimental/* tools/packaging/kernel/patches/5.15.x/; \
+	rm tools/packaging/kernel/patches/5.15.x/no_patch* -f
+endif
 	cd ./tools/packaging/kernel; \
 	sudo -E touch configs/fragments/common/nfs.conf; \
 	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/common/nfs.conf; \

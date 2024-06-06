@@ -26,21 +26,22 @@ jobs:
         - self-hosted
         - ubuntu-22.04
     outputs:
-      date: ${{ steps.date.outputs.date }}
-      amd64: ${{ steps.date.outputs.amd64 }}
-      arm64: ${{ steps.date.outputs.arm64 }}
+      date: ${{ steps.data.outputs.date }}
+      x64image: ${{ steps.data.outputs.amd64 }}
+      armimage: ${{ steps.data.outputs.arm64 }}
     steps:
-    - name: Get current date
-      id: date
+    - name: Set Data
+      id: data
       shell: bash
       run: |
         set -x
-        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
+        time=$(date +'%Y%m%d%H%M')
+        echo "date=$time" >> "$GITHUB_OUTPUT"
         ARCH=$(uname -m)
         if [[ "$ARCH" == "x86_64" ]]; then
-          echo "amd64=${{ env.REGISTRY_NAME }}/yylt/amd64-ecr-deploy" >> "$GITHUB_OUTPUT"
+          echo "amd64=amd64-ecr-deploy:$time" >> "$GITHUB_OUTPUT"
         else
-          echo "arm64=${{ env.REGISTRY_NAME }}/yylt/arm64-ecr-deploy" >> "$GITHUB_OUTPUT"
+          echo "arm64=arm64-ecr-deploy:$time" >> "$GITHUB_OUTPUT"
         fi
 
     - uses: actions-rs/toolchain@v1
@@ -64,7 +65,7 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Login to Ghcr Hub
+    - name: Login to Registry
       uses: docker/login-action@v2
       with:
         registry: ${{ env.REGISTRY_NAME }}
@@ -77,7 +78,7 @@ jobs:
         make -f ../kata-image/kata-image.mk all
       env:
         REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
-        IMAGE_TAG: ${{ steps.date.outputs.date }}
+        IMAGE_TAG: ${{ steps.data.outputs.date }}
         DEBUG: true
 
   notify:
@@ -90,17 +91,19 @@ jobs:
     - name: WeChat Work notification
       shell: bash
       env:
-        DATE: ${{needs.build.outputs.date}}
-        AMD64: ${{needs.build.outputs.amd64}}
-        ARM64: ${{needs.build.outputs.arm64}}
+        DATE: ${{ needs.build.outputs.date }}
+        AMD64: ${{ needs.build.outputs.x64image }}
+        ARM64: ${{ needs.build.outputs.armimage }}
         WEBHOOK: ${{ secrets.WEWORK_ECRGROUP_BUILD }}
       run: |
         text="ecr_deploy 编译完成"
+        regname=$(echo ${{ env.REGISTRY_NAME }} |awk -F . '{print $1}').io
+        text="$text, 仓库: $regname"
         if [[ "$AMD64" != "" ]];then
-          text="$text\nimage: $AMD64:$DATE"
+          text="$text\n$AMD64"
         fi
         if [[ "$ARM64" != "" ]];then
-          text="$text\nimage: $ARM64:$DATE"
+          text="$text\n$ARM64"
         fi
         echo "text: $text"
         data="{\"msgtype\":\"text\",\"text\":{\"content\":\"$text\"}}"
