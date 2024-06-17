@@ -85,6 +85,7 @@ ifeq ($(shell arch),aarch64)
 endif
 
 package:
+	sudo -E apt update 
 	sudo -E apt install -y \
 		gcc \
 		make \
@@ -99,7 +100,6 @@ package:
 		libelf-dev \
 		libfl-dev \
 		musl-tools \
-		glibc-tools \
 		libseccomp-dev \
 		curl wget sudo \
 		bc

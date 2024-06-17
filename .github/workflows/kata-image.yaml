@@ -24,7 +24,7 @@ jobs:
       matrix:
         os: 
         - self-hosted
-        - ubuntu-22.04
+        - ubuntu-20.04
     outputs:
       date: ${{ steps.data.outputs.date }}
       x64image: ${{ steps.data.outputs.amd64 }}
