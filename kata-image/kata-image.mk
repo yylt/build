@@ -52,37 +52,47 @@ ecr-runtime:
 generate-config:
 ifeq ($(shell arch),x86_64)
 	# make -C $(SOURCE_DIR) clean
-	SKIP_GO_VERSION_CHECK=y make -C $(SOURCE_DIR) config/configuration-qemu.toml \
+	make -C $(SOURCE_DIR) config/configuration-qemu.toml \
+	SKIP_GO_VERSION_CHECK=y \
 	QEMUPATH="/usr/libexec/qemu-kvm" \
 	KERNELPATH="/usr/share/ecr/vmlinuz.container" \
 	IMAGEPATH="/usr/share/ecr/ecr-containers.img" \
 	QEMUVALIDHYPERVISORPATHS='[\"/usr/libexec/qemu-kvm\"]' \
 	CPUFEATURES="pmu=off,vmx=off" \
 	DEFMEMSZ="2048" \
+	MACHINETYPE="q35" \
 	DEFVIRTIOFSDAEMON="/usr/libexec/virtiofsd" \
 	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/usr/libexec/virtiofsd\"]' \
 	DEFSANDBOXCGROUPONLY="true" \
-	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"guest_hook_path\",\"kernel\",\"image\",\"enable_sriov\",\"scsi_scan_mod\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
+	DEFAULTPFLASHES='[]' \
+	IOMMU='true' \
+	IOMMUPLATFORM='true' \
+	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"guest_hook_path\",\"kernel\",\"kernel_params\",\"image\",\"enable_sriov\",\"scsi_scan_mod\",\"enable_iommu\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
 	mv $(SOURCE_DIR)/config/configuration-qemu.toml $(CONFIG_FILE_NAME)
 endif
 
 ifeq ($(shell arch),aarch64)
 	# make -C $(SOURCE_DIR) clean
-	SKIP_GO_VERSION_CHECK=y make -C $(SOURCE_DIR) config/configuration-qemu.toml \
-	QEMUPATH="/usr/libexec/qemu-kvm" \
+	make -C $(SOURCE_DIR) config/configuration-qemu.toml \
+	SKIP_GO_VERSION_CHECK=y \
+	QEMUPATH="/opt/ecr/bin/qemu-system-aarch64" \
 	KERNELPATH="/usr/share/ecr/vmlinuz.container" \
 	IMAGEPATH="/usr/share/ecr/ecr-containers.img" \
-	QEMUVALIDHYPERVISORPATHS='[\"/usr/libexec/qemu-kvm\"]' \
+	QEMUVALIDHYPERVISORPATHS='[\"/usr/libexec/qemu-kvm\", \"/opt/ecr/bin/qemu-system-aarch64\"]' \
 	CPUFEATURES="pmu=off" \
 	DEFMEMSZ="2048" \
+	MACHINETYPE="virt" \
 	DEFVIRTIOFSDAEMON="/usr/libexec/virtiofsd" \
 	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/usr/libexec/virtiofsd\"]' \
 	DEFSANDBOXCGROUPONLY="true" \
 	DEFAULTPFLASHES='[\"/usr/share/ecr/ecr-flash0.img\", \"/usr/share/ecr/ecr-flash1.img\"]' \
 	DEFAULTDISABLEIMAGENVDIMM="true" \
-	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"kernel\",\"image\",\"scsi_scan_mod\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
+	IOMMU='false' \
+	IOMMUPLATFORM='false' \
+	DEFENABLEANNOTATIONS='[\"default_vcpus\",\"guest_hook_path\",\"kernel\",\"kernel_params\",\"image\",\"scsi_scan_mod\",\"enable_iommu\",\"enable_sriov\",\"hotplug_vfio_on_root_bus\",\"pcie_root_port\",\"sandbox_cgroup_only\",\"read_only_rootfs\"]'
 	mv $(SOURCE_DIR)/config/configuration-qemu.toml $(CONFIG_FILE_NAME)
 endif
+
 
 package:
 	sudo -E apt update 
