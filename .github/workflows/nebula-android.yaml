@@ -1,0 +1,71 @@
+name: nebula
+
+on:
+  push:
+    branches: [ nebula ]
+  workflow_dispatch:
+    
+permissions: # added using https://github.com/step-security/secure-workflows
+  contents: write
+
+env:
+  GO111MODULE: on 
+  PROJECT: nebula
+  BRANCH: v0.3.2-2
+  VCODE: 20
+
+jobs:
+  build:
+    name: Build nebule apk
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.22
+      uses: actions/setup-go@v4
+      with:
+        go-version: "1.22"
+
+    - uses: actions/setup-java@v2
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+
+    - name: Install flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.3.5'
+
+    - uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r21b
+        add-to-path: true
+        link-to-sdk: true
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Check out build code
+      uses: actions/checkout@v2
+      with:
+        repository: DefinedNet/mobile_nebula
+        ref: ${{ env.BRANCH }} 
+        path: ${{ env.PROJECT }}
+
+    - name: Get build name and number, install dependencies
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      run: |
+        set -x
+        cd ${{ env.PROJECT }}
+        go install golang.org/x/mobile/cmd/gomobile@latest
+        gomobile init
+
+        flutter pub get
+
+        touch env.sh
+
+        buildname="${{ env.BRANCH }}"
+        flutter build appbundle --build-number="${{ env.VCODE }}" --build-name="${buildname#v}"
+
+        tree build/app/outputs/bundle/release/
+
