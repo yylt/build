@@ -32,7 +32,7 @@ else
 endif
 
 
-all: generate-config build-image build-kernel ecr-runtime containerd-shim-v2 docker-push 
+all: generate-config build-kernel build-image ecr-runtime containerd-shim-v2 docker-push 
 
 .PHONY: target
 target: 
@@ -119,22 +119,8 @@ ifeq ($(shell arch),aarch64)
 	cp -a tools/packaging/kernel/patches/5.15.x/arm-experimental/* tools/packaging/kernel/patches/5.15.x/; \
 	rm tools/packaging/kernel/patches/5.15.x/no_patch* -f
 endif
+	cp ../kata-image/5.15.63/configs/* tools/packaging/kernel/configs/fragments/common/
 	cd ./tools/packaging/kernel; \
-	sudo -E touch configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_FS=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V2=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V3=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V3_ACL=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V4=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_SWAP=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V4_1=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V4_2=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_PNFS_FILE_LAYOUT=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_PNFS_FLEXFILE_LAYOUT=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V4_1_MIGRATION=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_NFS_V4_SECURITY_LABEL=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "CONFIG_ROOT_NFS=y" >> configs/fragments/common/nfs.conf; \
-	sudo -E echo "" >> configs/fragments/common/nfs.conf; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d setup; \
 	sudo -E ./build-kernel.sh -v 5.15.63 -f -d install; \
 	sudo -E cp /usr/share/kata-containers/vmlinuz.container  ../../../ecr_deploy/vmlinuz.container

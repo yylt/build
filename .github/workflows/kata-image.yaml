@@ -107,4 +107,4 @@ jobs:
         fi
         echo "text: $text"
         data="{\"msgtype\":\"text\",\"text\":{\"content\":\"$text\"}}"
-        curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
+        #curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
