@@ -1,0 +1,13 @@
+FROM alpine:3.20
+
+LABEL maintainer "yylt <yang8518296@163.com>"
+LABEL source "https://github.com/yylt/build"
+LABEL branch "master"
+LABEL testtool "curl/nmap/sysbench/iperf/fio/stress-ng"
+
+USER root
+# 工具
+RUN apk -U --no-cache add curl nmap sysbench iperf fio stress-ng 
+
+
+ENTRYPOINT ["sleep", "10d"]
