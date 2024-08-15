@@ -11,7 +11,6 @@ env:
   Dockerfile: Dockerfile-dcgm
   PROJECT: dcgm
   BRANCH: master
-  TagVersion: v0.0.1
   REGISTRY_NAME: ghcr.io
 
 jobs:
@@ -58,12 +57,13 @@ jobs:
         password: ${{ secrets.GHCR_PASSWORD }}
 
     - name: Docker Buildx (push)
+      shell: bash
       run: |
         cd ${{ env.PROJECT }}
+        commit=$(git rev-parse --short=8 HEAD)
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
-          --tag ${{ env.REGISTRY_NAME }}/yylt/dcgm:latest \
-          --tag ${{ env.REGISTRY_NAME }}/yylt/dcgm:${{ env.TagVersion }} \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/dcgm:${commit} \
           --file ../${{ env.Dockerfile }} ./

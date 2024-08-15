@@ -1,60 +1,41 @@
-FROM nvcr.io/nvidia/cuda:12.5.1-base-ubuntu22.04 AS builder
-ARG GOLANG_VERSION=1.22.4
+FROM nvidia/cuda:12.5.1-base-ubi8 as build
+
 
 WORKDIR /go/src/github.com/easystack/accelerator-manager
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends \
-	g++ \
-	gcc \
-	libc6-dev \
-	make \
-	pkg-config \
-	wget 
+
+RUN yum install -y \
+    wget make git gcc \
+     && \
+    rm -rf /var/cache/yum/*
+
+ARG GOLANG_VERSION=1.22.4
 
 RUN set -eux; \
-	arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
-	url=; \
-	case "$arch" in \
-	'amd64') \
-	url="https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz"; \
-	;; \
-	'arm64') \
-	url="https://dl.google.com/go/go${GOLANG_VERSION}.linux-arm64.tar.gz"; \
-	;; \
-	*) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
-	esac; \
-	build=; \
-	if [ -z "$url" ]; then \
-	# https://github.com/golang/go/issues/38536#issuecomment-616897960
-	build=1; \
-	url="https://dl.google.com/go/go${GOLANG_VERSION}.src.tar.gz"; \
-	echo >&2; \
-	echo >&2 "warning: current architecture ($arch) does not have a compatible Go binary release; will be building from source"; \
-	echo >&2; \
-	fi; \
-	wget -O go.tgz "$url" --progress=dot:giga; \
-	tar -C /usr/local -xzf go.tgz; \
-	rm go.tgz;
-ENV GOTOOLCHAIN=local
+    \
+    arch="$(uname -m)"; \
+    case "${arch##*-}" in \
+        x86_64 | amd64) ARCH='amd64' ;; \
+        ppc64el | ppc64le) ARCH='ppc64le' ;; \
+        aarch64) ARCH='arm64' ;; \
+        *) echo "unsupported architecture" ; exit 1 ;; \
+    esac; \
+    wget -nv -O - https://storage.googleapis.com/golang/go${GOLANG_VERSION}.linux-${ARCH}.tar.gz \
+    | tar -C /usr/local -xz
+
 ENV GOPATH /go
-ENV PATH $GOPATH/bin:$PATH
-RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
-ENV PATH $PATH:/usr/local/go/bin
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+
 COPY . .
 
 RUN go build -o gpu-daemon ./cmd/gpu-config-daemon
 
-FROM nvcr.io/nvidia/cuda:12.5.1-base-ubuntu22.04
+FROM nvidia/cuda:12.5.1-base-ubi8
+# Remove CUDA libs(compat etc) in favor of libs installed by the NVIDIA driver
+RUN dnf remove -y cuda-*
 
-COPY --from=builder /go/src/github.com/easystack/accelerator-manager/gpu-daemon  /usr/bin/
-
-RUN apt-get update && apt-get install -y --no-install-recommends libcap2-bin \
-	&& rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/* \
-	&& rm -rf /usr/share/doc && rm -rf /usr/share/man
-
-# Required for DCP metrics
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,compat32
-# disable all constraints on the configurations required by NVIDIA container toolkit
 ENV NVIDIA_DISABLE_REQUIRE="true"
 ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+COPY --from=build /go/src/github.com/easystack/accelerator-manager/gpu-daemon  /usr/bin/
+
