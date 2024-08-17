@@ -19,7 +19,8 @@ jobs:
     steps:
     - name: Get current date
       id: date
-      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+      run: |
+        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
 
     - name: Check out repo code
       uses: actions/checkout@v2
@@ -54,11 +55,11 @@ jobs:
     - name: Docker Buildx image (push)
       run: |
         cd ${{ env.PROJECT }}
-        sed -i 's/--no-nfs-version 2//g' nfsd.sh
-        sed -i 's/--no-nfs-version 3//g' nfsd.sh
+        sed -i "s/--no-nfs-version 2 --no-nfs-version 3/\$([ \$(uname -m) == \"x86_64\" ] \&\& echo -n \"--no-nfs-version 2 --no-nfs-version 3\" || echo -n \"\")/g" nfsd.sh
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
           --tag yylt/nfs-server:latest \
+          --tag yylt/nfs-server:${{ steps.date.outputs.date }} \
           --file ./${{ env.Dockerfile }} .
