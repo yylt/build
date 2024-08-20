@@ -35,6 +35,7 @@ RUN dnf remove -y cuda-*
 
 ENV NVIDIA_DISABLE_REQUIRE="true"
 ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_MIG_MONITOR_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 COPY --from=build /go/src/github.com/easystack/accelerator-manager/gpu-daemon  /usr/bin/
