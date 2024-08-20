@@ -1,0 +1,13 @@
+ARG BASE_IMAGE=gcr.io/etcd-development/etcd:v3.5.15
+
+FROM ${BASE_IMAGE} as build
+
+FROM busybox:latest 
+WORKDIR /var/etcd/
+USER root
+
+
+COPY --from=build /usr/local/bin/etcd /usr/local/bin/
+COPY --from=build /usr/local/bin/etcdctl /usr/local/bin/
+COPY --from=build /usr/local/bin/etcdutl /usr/local/bin/
+CMD ["/bin/sh"]

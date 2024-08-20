@@ -1,0 +1,68 @@
+name: etcd
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ etcd ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'etcd version'
+        required: true
+        default: 'v3.5.15'
+
+env:
+  Dockerfile: Dockerfile-etcd
+  DefaultV: "v3.5.15"
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest #[self-hosted, linux, x64]
+    steps:
+    - name: Get current date
+      id: date
+      run: |
+        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
+
+     # commit sha is used for image tag
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}, sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "tag=${{ github.event.inputs.version }}"  >> $GITHUB_ENV
+        else
+            echo "tag=${{ env.DefaultV }}" >> $GITHUB_ENV
+        fi
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Check out repo code
+      uses: actions/checkout@v2
+
+    - name: Docker Image Build And Push
+      shell: bash
+      run: |
+        buildah login -u ${{ env.REGISTRY_USER }} -p ${{ env.REGISTRY_PASS }} ${{ env.REGISTRY_NAME }}
+
+        # amd64
+        buildah build --no-cache --platform linux/amd64 \
+          --build-arg BASE_IMAGE=${{ secrets.GCR_MIRROR }}/etcd-development/etcd:v3.5.15 \
+          -t ${{ env.REGISTRY_NAME }}/captain/etcd:${{ env.tag }} \
+          -f ./${{ env.Dockerfile }} .
+        buildah push ${{ env.REGISTRY_NAME }}/captain/etcd:${{ env.tag }}
+
+        # arm64
+        buildah build --no-cache --platform linux/arm64 \
+          --build-arg BASE_IMAGE=${{ secrets.GCR_MIRROR }}/etcd-development/etcd:v3.5.15 \
+          -t ${{ env.REGISTRY_NAME }}/arm64v8/etcd:${{ env.tag }} \
+          -f ./${{ env.Dockerfile }} .
+        buildah push ${{ env.REGISTRY_NAME }}/arm64v8/etcd:${{ env.tag }}
