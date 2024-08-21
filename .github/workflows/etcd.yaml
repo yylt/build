@@ -12,10 +12,18 @@ on:
         description: 'etcd version'
         required: true
         default: 'v3.5.15'
-
+      arm:
+        description: 'build&push arm64 image'
+        required: false
+        default: 'on'
+      amd:
+        description: 'build&push amd64 image'
+        required: false
+        default: 'on'
 env:
   Dockerfile: Dockerfile-etcd
   DefaultV: "v3.5.15"
+  REGISTRY_GCR: "gcr.io"  #gcr.io
   REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
   REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
   REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
@@ -23,7 +31,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest #[self-hosted, linux, x64]
+    runs-on: ubuntu-22.04 #[self-hosted, linux, x64]
     steps:
     - name: Get current date
       id: date
@@ -34,12 +42,17 @@ jobs:
     - name: Getting image tag
       id: tag
       run: |
-        echo "trigger by ${{ github.event_name }}, sha256 is ${{ github.sha }}"
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
 
         if ${{ github.event_name == 'workflow_dispatch' }} ; then
             echo "tag=${{ github.event.inputs.version }}"  >> $GITHUB_ENV
+            echo "arm=${{ github.event.inputs.arm }}"  >> $GITHUB_ENV
+            echo "amd=${{ github.event.inputs.amd }}"  >> $GITHUB_ENV
         else
             echo "tag=${{ env.DefaultV }}" >> $GITHUB_ENV
+            echo "arm=on" >> $GITHUB_ENV
+            echo "amd=on" >> $GITHUB_ENV
         fi
 
     - name: Set up QEMU
@@ -48,21 +61,30 @@ jobs:
     - name: Check out repo code
       uses: actions/checkout@v2
 
-    - name: Docker Image Build And Push
+    - name: Docker Registry Login
       shell: bash
       run: |
         buildah login -u ${{ env.REGISTRY_USER }} -p ${{ env.REGISTRY_PASS }} ${{ env.REGISTRY_NAME }}
 
+    - name: Docker Image(amd64) Build And Push
+      if: ${{ contains( env.amd, 'on') }}
+      shell: bash
+      run: |
         # amd64
         buildah build --no-cache --platform linux/amd64 \
-          --build-arg BASE_IMAGE=${{ secrets.GCR_MIRROR }}/etcd-development/etcd:v3.5.15 \
+          --build-arg BASE_IMAGE=${{ env.REGISTRY_GCR }}/etcd-development/etcd:v3.5.15 \
           -t ${{ env.REGISTRY_NAME }}/captain/etcd:${{ env.tag }} \
           -f ./${{ env.Dockerfile }} .
         buildah push ${{ env.REGISTRY_NAME }}/captain/etcd:${{ env.tag }}
-
+        
+    - name: Docker Image(arm64) Build And Push
+      if: ${{ contains( env.arm, 'on') }}
+      shell: bash
+      run: |
         # arm64
         buildah build --no-cache --platform linux/arm64 \
-          --build-arg BASE_IMAGE=${{ secrets.GCR_MIRROR }}/etcd-development/etcd:v3.5.15 \
+          --build-arg BASE_IMAGE=${{ env.REGISTRY_GCR }}/etcd-development/etcd:v3.5.15 \
           -t ${{ env.REGISTRY_NAME }}/arm64v8/etcd:${{ env.tag }} \
           -f ./${{ env.Dockerfile }} .
         buildah push ${{ env.REGISTRY_NAME }}/arm64v8/etcd:${{ env.tag }}
+
