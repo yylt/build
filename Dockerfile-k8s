@@ -2,9 +2,9 @@ FROM alpine:3.15
 
 ARG TARGETARCH
 
-RUN apk --no-cache add ca-certificates ceph-common  \
+RUN apk -U --no-cache add ca-certificates ceph-common  \
     e2fsprogs xfsprogs ebtables ethtool conntrack-tools \
-    iptables ipset bash kmod socat util-linux ; \
+    iptables ipset bash kmod socat util-linux; \
     echo 'hosts: files dns' > /etc/nsswitch.conf; \
     rm -rf /sbin/iptables /sbin/iptables-save /sbin/iptables-restore; \
     ln -s /sbin/xtables-nft-multi /sbin/iptables; \
