@@ -31,10 +31,10 @@ jobs:
       uses: docker/setup-buildx-action@v1
 
     - name: Check out repo code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Check out build code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: kubernetes/${{ env.PROJECT }}
         ref: ${{ env.BRANCH }}

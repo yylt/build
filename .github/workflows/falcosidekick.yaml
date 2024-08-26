@@ -21,10 +21,10 @@ jobs:
       run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
 
     - name: Check out repo code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Check out build code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: falcosecurity/falcosidekick
         ref: ${{ env.BRANCH }}

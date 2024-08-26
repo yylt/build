@@ -25,24 +25,24 @@ jobs:
         echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
 
     - name: Check out repo code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Check out build code openshift/ib-sriov-cni
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: openshift/ib-sriov-cni
         ref: master
         path: ib-sriov-cni
 
     - name: Check out build code openshift/sriov-cni
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: openshift/sriov-cni
         ref: master
         path: sriov-cni
 
     - name: Check out build code k8snetworkplumbingwg/whereabouts
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: k8snetworkplumbingwg/whereabouts
         ref: master
