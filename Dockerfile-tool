@@ -20,16 +20,18 @@ FROM bitnami/kubectl:1.25 as kube
 
 # FROM debian:stable-slim
 # RUN apt-get update && \
-#    apt-get install -y --no-install-recommends curl jq git bash openssh-client netcat-openbsd wrk && \
+#    apt-get install -y --no-install-recommends curl jq git bash etcat-openbsd wrk && \
 #    rm -rf /var/lib/apt/lists/* 
 
-FROM alpine
+FROM alpine:edge
 ARG TARGETARCH
 
-COPY ./entrypoint/kubernetes-entrypoint_$TARGETARCH /usr/bin/kubernetes-entrypoint
-COPY ./gotpl/gotpl_$TARGETARCH /usr/bin/gotpl
+# COPY ./entrypoint/kubernetes-entrypoint_$TARGETARCH /usr/bin/kubernetes-entrypoint
+# COPY ./gotpl/gotpl_$TARGETARCH /usr/bin/gotpl
+# COPY --from=helm /usr/bin/helm /usr/bin/
+# COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
 
-RUN  apk -U --no-cache add curl jq git bash netcat-openbsd wrk #py3-pip openssh
+RUN  apk -U --no-cache add curl jq git bash netcat-openbsd wrk buildah python3 openssh #py3-pip 
 
 # RUN pip3 install --no-cache-dir  s3cmd 
 # COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
@@ -38,6 +40,5 @@ RUN  apk -U --no-cache add curl jq git bash netcat-openbsd wrk #py3-pip openssh
 COPY --from=builder /workspace/crane /usr/bin/
 COPY --from=builder /workspace/yq /usr/bin/
 COPY --from=builder /workspace/mc /usr/bin/
-COPY --from=helm /usr/bin/helm /usr/bin/
-COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
+
 

@@ -27,7 +27,7 @@ jobs:
       id: go
 
     - name: Check out repo code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: install frpc and xray
       run: |

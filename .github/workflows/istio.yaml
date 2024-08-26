@@ -24,17 +24,17 @@ jobs:
       run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
 
     - name: Check out repo code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Check out build code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: istio/${{ env.PROJECT }}
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
 
     - name: Check out check-sidecar code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: easystack/${{ env.PROJECT2 }}
         ref: ${{ env.BRANCH2 }}
