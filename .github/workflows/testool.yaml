@@ -9,7 +9,6 @@ on:
 
 env:
   Dockerfile: Dockerfile-testool
-  TagVersion: v1.0.0
 
 jobs:
   build:
@@ -17,8 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Get current date
-      id: date
-      run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
@@ -51,5 +52,5 @@ jobs:
           --platform linux/arm64,linux/amd64 \
           --output "type=image,push=true" \
           --tag yylt/testool:latest \
-          --tag yylt/testool:${{ env.TagVersion }} \
+          --tag yylt/testool:${{ env.date }} \
           --file ./${{ env.Dockerfile }} ./

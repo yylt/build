@@ -7,7 +7,6 @@ LABEL testtool "curl/nmap/sysbench/iperf/fio/stress-ng"
 
 USER root
 # 工具
-RUN apk -U --no-cache add curl nmap sysbench iperf fio stress-ng 
+RUN apk -U --no-cache add curl git nmap sysbench wrk iperf fio stress-ng python3
 
-
-ENTRYPOINT ["sleep", "10d"]
+CMD ["sleep", "10d"]
