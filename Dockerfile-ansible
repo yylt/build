@@ -1,0 +1,5 @@
+FROM alpine:3.7
+
+
+RUN apk -U --no-cache add python2 py2-pip && \
+    pip install pbr ansible netaddr jinja2
