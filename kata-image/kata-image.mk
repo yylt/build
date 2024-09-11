@@ -26,9 +26,9 @@ IMAGE_TAG ?= v$(shell cat ./VERSION)-$(LAST_COMMIT_ID)
 TARGET ?= "" # kunlun, nvidia, mellanox or ecr
 
 ifeq ($(shell arch),aarch64)
-	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
+	IMAGE_NAME ?= $(REGISTRY_NAME)/arm64v8/ecr-deploy
 else
-	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
+	IMAGE_NAME ?= $(REGISTRY_NAME)/captain/ecr-deploy
 endif
 
 
