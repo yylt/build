@@ -10,11 +10,15 @@ dpkg -i /tmp/linux*deb
 chmod +x /tmp/NVIDIA*.run
 /tmp/NVIDIA*.run -x
 /NVIDIA*/nvidia-installer -k 5.15.63 -q -s --no-x-check
-rm -rf /NVIDIA* # clean
+
+# 安装 mlnx
+#/tmp/MLNX_OFED_LINUX*/mlnxofedinstall -k 5.15.63 --add-kernel-support --distro ubuntu22.04
+
+# clean
+rm -rf /NVIDIA* 
 # 安装 toolkit
 cat > /etc/apt/sources.list.d/nvidia-container-toolkit.list <<-'EOF'
 deb [trusted=yes] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /
-deb [trusted=yes] https://nvidia.github.io/libnvidia-container/stable/ubuntu18.04/$(ARCH) /
 EOF
 apt update && apt --no-install-recommends -y install nvidia-container-toolkit && apt clean all
 

@@ -133,12 +133,21 @@ image() {
             cp -af ${kata_src_path}/linux*deb ${kata_src_path}/tools/osbuilder/rootfs-builder/mellanox/
         ;;
         nvidia)
+            # 拷贝 linux header 
+            cp -af ${kata_src_path}/linux*deb ${kata_src_path}/tools/osbuilder/rootfs-builder/nvidia/
+            # 下载 nvidia driver
             if [[ $nvidia_download_url == "" ]];then
                 die "url for nvidia is null"
             fi
             filename=$(basename "$nvidia_download_url")
             curl -L ${nvidia_download_url} -o ${kata_src_path}/tools/osbuilder/rootfs-builder/nvidia/$filename
-            cp -af ${kata_src_path}/linux*deb ${kata_src_path}/tools/osbuilder/rootfs-builder/nvidia/
+            
+            # 下载 mlnx driver
+            if [[ $mlnx_download_url == "" ]];then
+                die "url for mlnx is null"
+            fi
+            filename=$(basename "$mlnx_download_url")
+            curl -L ${mlnx_download_url} -o ${kata_src_path}/tools/osbuilder/rootfs-builder/nvidia/$filename
         ;;
 	esac
 

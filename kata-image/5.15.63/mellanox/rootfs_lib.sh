@@ -21,8 +21,13 @@ melx_build() {
 	cp $script_dir/linux*.deb "$rootfstmp"
 
 	mount -t proc -o ro none $rootfs_dir/proc
+	mount -o bind /dev ${rootfs_dir}/dev
+	mount -t devpts none ${rootfs_dir}/dev/pts
 	chroot "${rootfs_dir}" /usr/bin/bash "/tmp/install.sh"
+
 	umount ${rootfs_dir}/proc
+	umount ${rootfs_dir}/dev/pts
+	umount ${rootfs_dir}/dev
 
 	rm -rf "${rootfstmp}"
 }

@@ -134,7 +134,7 @@ build-image: agent
 	export SECCOMP=no; \
 	export LIBC=gnu; \
 	export DEBUG=true; \
-	export EXTRA_PKGS="coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
+	export EXTRA_PKGS="gcc make curl gnupg coreutils apt tar kmod pkg-config libc-dev libc6-dev pciutils coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/src/agent/target/$$arch-unknown-linux-gnu/release/kata-agent"; \
 	sudo -E ./rootfs-builder/rootfs.sh  ubuntu; \
