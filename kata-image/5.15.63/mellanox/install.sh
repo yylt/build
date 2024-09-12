@@ -1,6 +1,17 @@
 #!/bin/bash
 
-set -x
+set -e
+
+# 准备必要的文件
+# mkdir /var/lib/dpkg
+# touch /var/lib/dpkg/status
+# mkdir /var/lib/dpkg/updates/
+# mkdir -p /var/lib/dpkg/info/
+# touch /var/lib/dpkg/info/format-new
+# mkdir -p /var/cache/apt/archives/partial
+# mkdir -p /var/log/apt/
+# mkdir /var/lib/dpkg/alternatives
+# touch /var/lib/dpkg/available
 
 
 # 安装 kernel deb

@@ -85,11 +85,15 @@ jobs:
         make -f ../kata-image/kata-image.mk generate-config 
         make -f ../kata-image/kata-image.mk containerd-shim-v2 ecr-runtime 
         make -f ../kata-image/kata-image.mk build-kernel
-        make -f ../kata-image/kata-image.mk build-image
+        #make -f ../kata-image/kata-image.mk build-image
         if [[ "$ARCH" == "x86_64" ]]; then
           make -f ../kata-image/kata-image.mk agent
+          TARGET=mellanox make -f ../kata-image/kata-image.mk target
+          mv ../kata-image/mellanox-containers.img ecr_deploy/ecr-containers.img
+
           TARGET=nvidia make -f ../kata-image/kata-image.mk target
           mv ../kata-image/nvidia-containers.img ecr_deploy/ecr-containers-nvidiaGpu.img
+
         fi
         make -f ../kata-image/kata-image.mk docker-push
       env:
