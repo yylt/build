@@ -33,7 +33,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # 兼容 centos 8
     steps:
     
     - name: Getting image tag
@@ -77,7 +77,12 @@ jobs:
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
-        
+
+    - name: Image Registry Login
+      shell: bash
+      run: |
+        buildah login -u ${{ env.REGISTRY_USER }} -p ${{ env.REGISTRY_PASS }} ${{ env.REGISTRY_NAME }}
+  
     - name: Build binary
       run: |
         cd ${{ env.PROJECT }}
@@ -92,11 +97,6 @@ jobs:
 
         tree _output
 
-    - name: Image Registry Login
-      shell: bash
-      run: |
-        buildah login -u ${{ env.REGISTRY_USER }} -p ${{ env.REGISTRY_PASS }} ${{ env.REGISTRY_NAME }}
-
     - name: Docker Image(amd64) Build And Push
       if: ${{ contains( env.amd, 'on') }}
       shell: bash
@@ -104,11 +104,15 @@ jobs:
         cd ${{ env.PROJECT }}
         # amd64
         image_repo=${{ env.REGISTRY_NAME }}/captain/hyperkube:${{ env.vbranch }}
-        buildah build --no-cache --platform linux/amd64 \
+        image_repo2=${{ env.REGISTRY_NAME }}/production/hyperkube:${{ env.vbranch }}
+        buildah bud --no-cache --platform linux/amd64 \
           -t $image_repo \
+          -t $image_repo2 \
+          --build-arg TARGETARCH=amd64 \
           -f ../${{ env.Dockerfile }} .
         buildah push $image_repo
-        
+        buildah push $image_repo2
+
     - name: Docker Image(arm64) Build And Push
       if: ${{ contains( env.arm, 'on') }}
       shell: bash
@@ -116,8 +120,9 @@ jobs:
         cd ${{ env.PROJECT }}
         # arm64
         image_repo=${{ env.REGISTRY_NAME }}/arm64v8/hyperkube:${{ env.vbranch }}
-        buildah build --no-cache --platform linux/arm64 \
+        buildah bud --no-cache --platform linux/arm64 \
           -t $image_repo \
+          --build-arg TARGETARCH=arm64 \
           -f ../${{ env.Dockerfile }} .
         buildah push $image_repo
 
