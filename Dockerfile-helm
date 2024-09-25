@@ -1,0 +1,23 @@
+
+ARG BASE_IMAGE=ubuntu:latest
+
+FROM golang:1.22 as BUILD
+WORKDIR /workspace
+COPY . .
+RUN cd helm && make 
+
+
+FROM $BASE_IMAGE as BASE
+
+
+FROM debian:bullseye-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl bash ca-certificates && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /tmp/charts
+
+# 拷贝不确定是否合适
+COPY --from=BASE  /usr/local/bin  /usr/local/bin/
+COPY --from=BASE  /tmp/charts /tmp/charts
+COPY --from=BUILD /workspace/helm/bin/helm /usr/local/bin/
