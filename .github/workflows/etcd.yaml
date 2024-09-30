@@ -22,7 +22,7 @@ on:
         default: 'on'
 env:
   Dockerfile: Dockerfile-etcd
-  DefaultV: "v3.5.15"
+  DefaultV: "v3.5.16"
   REGISTRY_GCR: "gcr.io"  #gcr.io
   REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
   REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
@@ -42,6 +42,7 @@ jobs:
     - name: Getting image tag
       id: tag
       run: |
+        set -x
         echo "trigger by ${{ github.event_name }}"
         echo "sha256 is ${{ github.sha }}"
 
@@ -74,7 +75,7 @@ jobs:
         image_repo=${{ env.REGISTRY_NAME }}/captain/etcd:${{ env.tag }}
         image_repo2=${{ env.REGISTRY_NAME }}/production/etcd:${{ env.tag }}
         buildah bud --no-cache --platform linux/amd64 \
-          --build-arg BASE_IMAGE=${{ env.REGISTRY_GCR }}/etcd-development/etcd:v3.5.15 \
+          --build-arg BASE_IMAGE=${{ env.REGISTRY_GCR }}/etcd-development/etcd:${{ env.tag }} \
           -t $image_repo \
           -t $image_repo2 \
           -f ./${{ env.Dockerfile }} .
@@ -89,7 +90,7 @@ jobs:
         # arm64
         image_repo=${{ env.REGISTRY_NAME }}/arm64v8/etcd:${{ env.tag }}
         buildah bud --no-cache --platform linux/arm64 \
-          --build-arg BASE_IMAGE=${{ env.REGISTRY_GCR }}/etcd-development/etcd:v3.5.15 \
+          --build-arg BASE_IMAGE=${{ env.REGISTRY_GCR }}/etcd-development/etcd:${{ env.tag }} \
           -t $image_repo \
           --build-arg TARGETARCH=arm64 \
           -f ./${{ env.Dockerfile }} .
