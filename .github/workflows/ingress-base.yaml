@@ -6,12 +6,19 @@ on:
   push:
     branches: [ ingress-base ]
   workflow_dispatch:
-
+    inputs:
+      script_version:
+        description: 'script version, only support 1.9 or 0.49'
+        required: true
+        default: '1.9'
+      branch:
+        description: 'branch or tag name, should compatibe with SCRIPT_VERSION'
+        required: true
+        default: 'release-1.9'
 env:
-  REPO: kubernetes/ingress-nginx
-  Version: "1.21" # ingress build script 
   PROJECT: ingress-nginx
-  BRANCH: controller-v1.9.6 # should compatibe with env.Version
+  BRANCH: release-1.9 # NOTICE, SCRIPT_VERSION must comtible
+  SCRIPT_VERSION: 1.9
   REGISTRY_NAME: "docker.io"
   REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
   REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
@@ -21,8 +28,26 @@ jobs:
     name: Build
     runs-on: ubuntu-22.04 #[self-hosted, linux, x64]
     steps:
+     # commit sha is used for image tag
+    - name: Getting image tag
+      id: tag
+      run: |
+        set -x
+      
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "BRANCH=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV    
+        fi
+
+        echo "trigger by ${{ github.event_name }}"
+        echo "BRANCH is ${{ env.BRANCH }}"
+        echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
     - name: Check out repo code
       uses: actions/checkout@v4
@@ -30,8 +55,9 @@ jobs:
     - name: Check out build code
       uses: actions/checkout@v4
       with:
-        repository: ${{ env.REPO }}
-        ref: ${{ env.BRANCH }} 
+        repository: easystack/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }} 
         path: ${{ env.PROJECT }}
 
     - name: Login to Registry
@@ -46,17 +72,18 @@ jobs:
       run: |
         set -ex
         # 覆盖默认build.sh, 支持 sm 密码 ssl 库
-        cp -f ingress/build-${{ env.Version }}.sh ${{ env.PROJECT }}/images/nginx/rootfs/build.sh
+        cp -f ingress/build-${{ env.SCRIPT_VERSION }}.sh ${{ env.PROJECT }}/images/nginx/rootfs/build.sh
 
         # 删除 openssl 相关
         sed -i '/openssl/d' ${{ env.PROJECT }}/images/nginx/rootfs/Dockerfile
 
         # build 
         cd ${{ env.PROJECT }}/images/nginx/rootfs
+
         docker buildx build \
           --no-cache \
-          --platform linux/amd64 \
+          --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
-          --tag yylt/nginx:latest \
-          --tag yylt/nginx:${{ env.Version }} \
-          --file ./Dockerfile ./
+          --tag ${{ env.REGISTRY_NAME }}/yylt/nginx:latest \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/nginx:${{ env.SCRIPT_VERSION }} \
+          --file ./Dockerfile .
