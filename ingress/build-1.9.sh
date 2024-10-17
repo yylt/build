@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# FROM https://github.com/kubernetes/ingress-nginx/blob/controller-v1.9.6/images/nginx/rootfs/build.sh 
-# ssl support SM, more info: https://github.com/guanzhi/GmSSL
+# FROM https://github.com/kubernetes/ingress-nginx/blob/controller-v1.9.1/images/nginx/rootfs/build.sh 
 
 set -o errexit
 set -o nounset
@@ -23,6 +22,17 @@ set -o pipefail
 
 export NGINX_VERSION=1.21.6
 
+# 方案一：参考 https://www.gmssl.cn/gmssl/index.jsp
+gmssl="https://www.gmssl.cn/gmssl/down/gmssl_openssl_1.1_b2024_aarch64_1.tar.gz"   
+gmssl_sha256="b8aa4c46858b8f9fcfb2cd4522ccdcf95fbf9b90176a1b4b7d5e87ba627857e1"   
+
+# arch decide gmssl_openssl 
+if [ $(arch) = "x86_64" ];then
+    gmssl="https://www.gmssl.cn/gmssl/down/gmssl_openssl_1.1_b2024_x64_1.tar.gz"   
+    gmssl_sha256="bd938829014ed18713661beaefdec33f7dd407fffdcb0a1fe544e2afe30a3622"     
+fi
+
+# 方案二：参考 https://github.com/guanzhi/GmSSL
 # Check for recent changes: https://github.com/guanzhi/GmSSL/compare/v3.3.1...master
 export GMSSL_VERSION=34fa519dc0f94a9a3995d9daf09c84cdac37abd8
 
@@ -68,8 +78,8 @@ export DATADOG_CPP_VERSION=1.3.7
 # Check for recent changes: https://github.com/SpiderLabs/ModSecurity-nginx/compare/v1.0.3...master
 export MODSECURITY_VERSION=1.0.3
 
-# Check for recent changes: https://github.com/SpiderLabs/ModSecurity/compare/v3.0.11...v3/master
-export MODSECURITY_LIB_VERSION=bbde9381cbccb49ea73f6194b08b478adc53f3bc
+# Check for recent changes: https://github.com/SpiderLabs/ModSecurity/compare/v3.0.8...v3/master
+export MODSECURITY_LIB_VERSION=e9a7ba4a60be48f761e0328c6dfcc668d70e35a0
 
 # Check for recent changes: https://github.com/coreruleset/coreruleset/compare/v3.3.2...v3.3/master
 export OWASP_MODSECURITY_CRS_VERSION=v3.3.5
@@ -86,8 +96,8 @@ export LUA_UPSTREAM_VERSION=8aa93ead98ba2060d4efd594ae33a35d153589bf
 # Check for recent changes: https://github.com/openresty/lua-cjson/compare/2.1.0.11...openresty:master
 export LUA_CJSON_VERSION=2.1.0.11
 
-# Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.4...master
-export GEOIP2_VERSION=a607a41a8115fecfc05b5c283c81532a3d605425
+# Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.3...master
+export GEOIP2_VERSION=a26c6beed77e81553686852dceb6c7fdacc5970d
 
 # Check for recent changes: https://github.com/openresty/luajit2/compare/v2.1-20230410...v2.1-agentzh
 export LUAJIT_VERSION=2.1-20230410
@@ -101,8 +111,8 @@ export LUA_RESTY_CACHE=0.13
 # Check for recent changes: https://github.com/openresty/lua-resty-core/compare/v0.1.27...master
 export LUA_RESTY_CORE=0.1.27
 
-# Check for recent changes: https://github.com/utix/lua-resty-cookie/compare/9533f47...master
-export LUA_RESTY_COOKIE_VERSION=9533f479371663107b515590fc9daf00d61ebf11
+# Check for recent changes: https://github.com/cloudflare/lua-resty-cookie/compare/v0.1.0...master
+export LUA_RESTY_COOKIE_VERSION=303e32e512defced053a6484bc0745cf9dc0d39e
 
 # Check for recent changes: https://github.com/openresty/lua-resty-dns/compare/v0.22...master
 export LUA_RESTY_DNS=0.22
@@ -160,40 +170,44 @@ get_src()
 }
 
 # install required packages to build
-apk add \
+apt-get update && \
+apt-get install -y --no-install-recommends \
   bash \
   gcc \
   clang \
   libc-dev \
   make \
   automake \
-  pcre-dev \
-  zlib-dev \
-  linux-headers \
-  libxslt-dev \
-  gd-dev \
-  perl-dev \
+  cmake \
+  util-linux \
+  libpcre3 \
+  libpcre3-dev \
+  zlib1g \
+  zlib1g-dev \
+  libmaxminddb-dev \
+  libxslt1-dev \
+  libgeoip-dev \
+  libperl-dev \
   libedit-dev \
+  libgd-dev \
   mercurial \
-  alpine-sdk \
   findutils \
   curl \
   ca-certificates \
   patch \
   libaio-dev \
-  cmake \
-  util-linux \
-  lmdb-tools \
+  lmdb-utils \
   wget \
-  curl-dev \
-  libprotobuf \
-  git g++ pkgconf flex bison doxygen yajl-dev lmdb-dev libtool autoconf libxml2 libxml2-dev \
+  libcurlpp-dev \
+  libprotobuf-dev \
+  libyajl-dev \
+  git g++ pkgconf flex bison doxygen libtool autoconf libxml2 libxml2-dev \
   python3 \
   libmaxminddb-dev \
   bc \
   unzip \
   dos2unix \
-  yaml-cpp \
+  libyaml-cpp-dev \
   coreutils
 
 mkdir -p /etc/nginx
@@ -202,6 +216,11 @@ mkdir --verbose -p "$BUILD_PATH"
 cd "$BUILD_PATH"
 
 # download, verify and extract the source files
+# 方案一
+get_src ${gmssl_sha256} \
+        ${gmssl}
+
+# 方案二
 get_src c34cc5536f1c1642cc0a1c7d1c7e077a5fe03be8f80c0794de63e2002f477990 \
          https://github.com/guanzhi/GmSSL/archive/$GMSSL_VERSION.tar.gz
 
@@ -258,6 +277,7 @@ get_src bc764db42830aeaf74755754b900253c233ad57498debe7a441cee2c6f4b07c2 \
 
 get_src 01b715754a8248cc7228e0c8f97f7488ae429d90208de0481394e35d24cef32f \
         "https://github.com/openresty/stream-lua-nginx-module/archive/v$LUA_STREAM_NGX_VERSION.tar.gz"
+
 fi
 
 get_src a92c9ee6682567605ece55d4eed5d1d54446ba6fba748cff0a2482aea5713d5f \
@@ -274,7 +294,7 @@ fi
 get_src 8d39c6b23f941a2d11571daaccc04e69539a3fcbcc50a631837560d5861a7b96 \
         "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
 
-get_src b6c9c09fd43eb34a71e706ad780b2ead26549a9a9f59280fe558f5b7b980b7c6 \
+get_src 4c1933434572226942c65b2f2b26c8a536ab76aa771a3c7f6c2629faa764976b \
         "https://github.com/leev/ngx_http_geoip2_module/archive/$GEOIP2_VERSION.tar.gz"
 
 get_src deb4ab1ffb9f3d962c4b4a2c4bdff692b86a209e3835ae71ebdf3b97189e40a9 \
@@ -297,8 +317,8 @@ fi
 get_src a77b9de160d81712f2f442e1de8b78a5a7ef0d08f13430ff619f79235db974d4 \
         "https://github.com/openresty/lua-cjson/archive/$LUA_CJSON_VERSION.tar.gz"
 
-get_src a404c790553617424d743b82a9f01feccd0d2930b306b370c665ca3b7c09ccb6 \
-        "https://github.com/utix/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
+get_src 5ed48c36231e2622b001308622d46a0077525ac2f751e8cc0c9905914254baa4 \
+        "https://github.com/cloudflare/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
 
 get_src 573184006b98ccee2594b0d134fa4d05e5d2afd5141cbad315051ccf7e9b6403 \
         "https://github.com/openresty/lua-resty-lrucache/archive/v$LUA_RESTY_CACHE.tar.gz"
@@ -352,16 +372,18 @@ cd "$BUILD_PATH"
 # Git tuning
 git config --global --add core.compression -1
 
-# build gmssl && gmssl_compatibility_layer
-cd "$BUILD_PATH/GmSSL-$GMSSL_VERSION"
-mkdir build && cd build
-cmake ..
-make && make test && make install
+# 方案一：
+cp -r "$BUILD_PATH/gmssl" /usr/local/
 
-cd "$BUILD_PATH/OpenSSL-Compatibility-Layer-$GMSSL_LAYER_VERSION"
-mkdir build && cd build
-cmake ..
-make &&  make install
+# 方案二：build gmssl && gmssl_compatibility_layer
+# cd "$BUILD_PATH/GmSSL-$GMSSL_VERSION"
+# mkdir build && cd build
+# cmake ..
+# make && make install
+# cd "$BUILD_PATH/OpenSSL-Compatibility-Layer-$GMSSL_LAYER_VERSION"
+# mkdir build && cd build
+# cmake ..
+# make &&  make install
 
 # build opentracing lib
 cd "$BUILD_PATH/opentracing-cpp-$OPENTRACING_CPP_VERSION"
@@ -501,7 +523,6 @@ cd ssdeep/
 
 ./bootstrap
 ./configure
-
 make
 make install
 
@@ -586,6 +607,7 @@ Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTE
 
 # build nginx
 cd "$BUILD_PATH/nginx-$NGINX_VERSION"
+sed -i 's|OPENSSL/\.openssl|OPENSSL|g' auto/lib/openssl/conf #方案一
 
 # apply nginx patches
 for PATCH in `ls /patches`;do
@@ -601,10 +623,12 @@ WITH_FLAGS="--with-debug \
   --with-compat \
   --with-pcre-jit \
   --with-http_ssl_module \
+  --with-openssl="/usr/local/gmssl" \
   --with-http_stub_status_module \
   --with-http_realip_module \
   --with-http_auth_request_module \
   --with-http_addition_module \
+  --with-http_geoip_module \
   --with-http_gzip_static_module \
   --with-http_sub_module \
   --with-http_v2_module \
@@ -628,9 +652,10 @@ CC_OPT="-g -O2 -fPIE -fstack-protector-strong \
   -DTCP_FASTOPEN=23 \
   -fPIC \
   -I$HUNTER_INSTALL_DIR/include \
+  -I/usr/local/gmssl/include \
   -Wno-cast-function-type"
 
-LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now -L$HUNTER_INSTALL_DIR/lib"
+LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now  -L/usr/local/gmssl/lib -L$HUNTER_INSTALL_DIR/lib"
 
 if [[ ${ARCH} != "aarch64" ]]; then
   WITH_FLAGS+=" --with-file-aio"
@@ -640,6 +665,7 @@ if [[ ${ARCH} == "x86_64" ]]; then
   CC_OPT+=' -m64 -mtune=generic'
 fi
 
+ 
 WITH_MODULES=" \
   --add-module=$BUILD_PATH/ngx_devel_kit-$NDK_VERSION \
   --add-module=$BUILD_PATH/set-misc-nginx-module-$SETMISC_VERSION \
@@ -651,8 +677,9 @@ WITH_MODULES=" \
   --add-dynamic-module=$BUILD_PATH/nginx-http-auth-digest-$NGINX_DIGEST_AUTH \
   --add-dynamic-module=$BUILD_PATH/nginx-opentracing-$NGINX_OPENTRACING_VERSION/opentracing \
   --add-dynamic-module=$BUILD_PATH/ModSecurity-nginx-$MODSECURITY_VERSION \
-  --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module-${GEOIP2_VERSION} \
-  --add-dynamic-module=$BUILD_PATH/ngx_brotli"
+  --add-dynamic-module=$BUILD_PATH/ngx_brotli \
+  --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module-${GEOIP2_VERSION}"
+
 
 ./configure \
   --prefix=/usr/local/nginx \
@@ -752,7 +779,10 @@ writeDirs=( \
   /var/log/nginx \
 );
 
-adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
+# alpine
+# adduser -S -D -H --uid 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
+# debian
+#useradd -M -u 101 -d /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
 
 for dir in "${writeDirs[@]}"; do
   mkdir -p ${dir};
@@ -763,4 +793,4 @@ rm -rf /etc/nginx/owasp-modsecurity-crs/.git
 rm -rf /etc/nginx/owasp-modsecurity-crs/util/regression-tests
 
 # remove .a files
-find /usr/local -name "*.a" -print | xargs /bin/rm
+# find /usr/local -name "*.a" -print | xargs /bin/rm
