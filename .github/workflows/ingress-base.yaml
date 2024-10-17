@@ -1,0 +1,62 @@
+name: ingress-base
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ ingress-base ]
+  workflow_dispatch:
+
+env:
+  REPO: kubernetes/ingress-nginx
+  Version: "1.21" # ingress build script 
+  PROJECT: ingress-nginx
+  BRANCH: controller-v1.9.6 # should compatibe with env.Version
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-22.04 #[self-hosted, linux, x64]
+    steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Check out repo code
+      uses: actions/checkout@v4
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.REPO }}
+        ref: ${{ env.BRANCH }} 
+        path: ${{ env.PROJECT }}
+
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Image Build And Push
+      shell: bash
+      run: |
+        set -ex
+        # 覆盖默认build.sh, 支持 sm 密码 ssl 库
+        cp -f ingress/build-${{ env.Version }}.sh ${{ env.PROJECT }}/images/nginx/rootfs/build.sh
+
+        # 删除 openssl 相关
+        sed -i '/openssl/d' ${{ env.PROJECT }}/images/nginx/rootfs/Dockerfile
+
+        # build 
+        cd ${{ env.PROJECT }}/images/nginx/rootfs
+        docker buildx build \
+          --no-cache \
+          --platform linux/amd64 \
+          --output "type=image,push=true" \
+          --tag yylt/nginx:latest \
+          --tag yylt/nginx:${{ env.Version }} \
+          --file ./Dockerfile ./
