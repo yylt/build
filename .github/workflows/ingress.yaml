@@ -15,10 +15,15 @@ on:
         description: 'branch or tag name, should compatibe with SCRIPT_VERSION'
         required: true
         default: 'release-1.9'
+      arch:
+        description: 'arch'
+        required: true
+        default: 'amd64'
 
 env:
   PROJECT: ingress-nginx
   BRANCH: release-1.9 # NOTICE, SCRIPT_VERSION must comtible
+  ARCH: amd64
   SCRIPT_VERSION: 1.9
 
   REGISTRY_NAME: "docker.io"
@@ -33,15 +38,16 @@ jobs:
     - name: Setting
       run: |
         set -x
-      
         if ${{ github.event_name == 'workflow_dispatch' }} ; then
             echo "BRANCH=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
-            echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV    
+            echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV 
+            echo "ARCH=${{ github.event.inputs.arch }}"  >> $GITHUB_ENV      
         fi
 
         echo "trigger by ${{ github.event_name }}"
         echo "BRANCH is ${{ env.BRANCH }}"
         echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
+        echo "ARCH is ${{ env.ARCH }}"
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -71,24 +77,28 @@ jobs:
       shell: bash
       run: |
         set -ex
-        
+        # 覆盖默认build.sh, 支持 sm 密码 ssl 库
+        cp -f ingress/build-${{ env.SCRIPT_VERSION }}.sh ${{ env.PROJECT }}/images/nginx/rootfs/build.sh
+
+        # 删除 openssl 相关
+        sed -i '/openssl/d' ${{ env.PROJECT }}/images/nginx/rootfs/Dockerfile
+
+        # build 
         cd ${{ env.PROJECT }}
         export REGISTRY=${{ env.REGISTRY_NAME }}/yylt
-        export BASE_IMAGE=yylt/nginx:${{ env.SCRIPT_VERSION }}
+        export BASE_IMAGE=${{ env.REGISTRY_NAME }}/yylt/ingress:${{ env.ARCH }}-base-${{ env.SCRIPT_VERSION }}
 
-        # build x86
-        export ARCH=amd64
-        export PLATFORM=linux/${ARCH}
-        make build
-        make image
-        docker tag ${REGISTRY}/controller:$(cat TAG) ${REGISTRY}/ingress:${ARCH}-${{ env.SCRIPT_VERSION }}
-        docker push ${REGISTRY}/ingress:${ARCH}-${{ env.SCRIPT_VERSION }}
+        # base base image
+        docker buildx build \
+          --no-cache \
+          --platform linux/${{ env.ARCH }} \
+          --output "type=image,push=true" \
+          --tag ${BASE_IMAGE} \
+          --file ./images/nginx/rootfs/Dockerfile ./images/nginx/rootfs
 
-        docker rmi yylt/nginx:${{ env.SCRIPT_VERSION }} # 需删除，无法拉取不同架构
-        # build arm64
-        export ARCH=arm64
-        export PLATFORM=linux/${ARCH}
-        make build
-        make image
+        # build ingress image
+        export ARCH=${{ env.ARCH }}
+        export PLATFORM=linux/${{ env.ARCH }}
+        make build && make image
         docker tag ${REGISTRY}/controller:$(cat TAG) ${REGISTRY}/ingress:${ARCH}-${{ env.SCRIPT_VERSION }}
         docker push ${REGISTRY}/ingress:${ARCH}-${{ env.SCRIPT_VERSION }}

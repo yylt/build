@@ -68,8 +68,8 @@ export DATADOG_CPP_VERSION=1.3.7
 # Check for recent changes: https://github.com/SpiderLabs/ModSecurity-nginx/compare/v1.0.3...master
 export MODSECURITY_VERSION=1.0.3
 
-# Check for recent changes: https://github.com/SpiderLabs/ModSecurity/compare/v3.0.11...v3/master
-export MODSECURITY_LIB_VERSION=bbde9381cbccb49ea73f6194b08b478adc53f3bc
+# Check for recent changes: https://github.com/SpiderLabs/ModSecurity/compare/v3.0.8...v3/master
+export MODSECURITY_LIB_VERSION=e9a7ba4a60be48f761e0328c6dfcc668d70e35a0
 
 # Check for recent changes: https://github.com/coreruleset/coreruleset/compare/v3.3.2...v3.3/master
 export OWASP_MODSECURITY_CRS_VERSION=v3.3.5
@@ -86,8 +86,8 @@ export LUA_UPSTREAM_VERSION=8aa93ead98ba2060d4efd594ae33a35d153589bf
 # Check for recent changes: https://github.com/openresty/lua-cjson/compare/2.1.0.11...openresty:master
 export LUA_CJSON_VERSION=2.1.0.11
 
-# Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.4...master
-export GEOIP2_VERSION=a607a41a8115fecfc05b5c283c81532a3d605425
+# Check for recent changes: https://github.com/leev/ngx_http_geoip2_module/compare/3.3...master
+export GEOIP2_VERSION=a26c6beed77e81553686852dceb6c7fdacc5970d
 
 # Check for recent changes: https://github.com/openresty/luajit2/compare/v2.1-20230410...v2.1-agentzh
 export LUAJIT_VERSION=2.1-20230410
@@ -101,8 +101,8 @@ export LUA_RESTY_CACHE=0.13
 # Check for recent changes: https://github.com/openresty/lua-resty-core/compare/v0.1.27...master
 export LUA_RESTY_CORE=0.1.27
 
-# Check for recent changes: https://github.com/utix/lua-resty-cookie/compare/9533f47...master
-export LUA_RESTY_COOKIE_VERSION=9533f479371663107b515590fc9daf00d61ebf11
+# Check for recent changes: https://github.com/cloudflare/lua-resty-cookie/compare/v0.1.0...master
+export LUA_RESTY_COOKIE_VERSION=303e32e512defced053a6484bc0745cf9dc0d39e
 
 # Check for recent changes: https://github.com/openresty/lua-resty-dns/compare/v0.22...master
 export LUA_RESTY_DNS=0.22
@@ -172,6 +172,7 @@ apk add \
   linux-headers \
   libxslt-dev \
   gd-dev \
+  geoip-dev \
   perl-dev \
   libedit-dev \
   mercurial \
@@ -207,6 +208,7 @@ get_src c34cc5536f1c1642cc0a1c7d1c7e077a5fe03be8f80c0794de63e2002f477990 \
 
 get_src 271bf6d5c7e070534ae0f464b3d807c64bc22333ec1c7db44e084d22bb581093 \
          https://github.com/GmSSL/OpenSSL-Compatibility-Layer/archive/$GMSSL_LAYER_VERSION.tar.gz
+
 
 get_src 66dc7081488811e9f925719e34d1b4504c2801c81dee2920e5452a86b11405ae \
         "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
@@ -258,6 +260,7 @@ get_src bc764db42830aeaf74755754b900253c233ad57498debe7a441cee2c6f4b07c2 \
 
 get_src 01b715754a8248cc7228e0c8f97f7488ae429d90208de0481394e35d24cef32f \
         "https://github.com/openresty/stream-lua-nginx-module/archive/v$LUA_STREAM_NGX_VERSION.tar.gz"
+
 fi
 
 get_src a92c9ee6682567605ece55d4eed5d1d54446ba6fba748cff0a2482aea5713d5f \
@@ -274,7 +277,7 @@ fi
 get_src 8d39c6b23f941a2d11571daaccc04e69539a3fcbcc50a631837560d5861a7b96 \
         "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
 
-get_src b6c9c09fd43eb34a71e706ad780b2ead26549a9a9f59280fe558f5b7b980b7c6 \
+get_src 4c1933434572226942c65b2f2b26c8a536ab76aa771a3c7f6c2629faa764976b \
         "https://github.com/leev/ngx_http_geoip2_module/archive/$GEOIP2_VERSION.tar.gz"
 
 get_src deb4ab1ffb9f3d962c4b4a2c4bdff692b86a209e3835ae71ebdf3b97189e40a9 \
@@ -297,8 +300,8 @@ fi
 get_src a77b9de160d81712f2f442e1de8b78a5a7ef0d08f13430ff619f79235db974d4 \
         "https://github.com/openresty/lua-cjson/archive/$LUA_CJSON_VERSION.tar.gz"
 
-get_src a404c790553617424d743b82a9f01feccd0d2930b306b370c665ca3b7c09ccb6 \
-        "https://github.com/utix/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
+get_src 5ed48c36231e2622b001308622d46a0077525ac2f751e8cc0c9905914254baa4 \
+        "https://github.com/cloudflare/lua-resty-cookie/archive/$LUA_RESTY_COOKIE_VERSION.tar.gz"
 
 get_src 573184006b98ccee2594b0d134fa4d05e5d2afd5141cbad315051ccf7e9b6403 \
         "https://github.com/openresty/lua-resty-lrucache/archive/v$LUA_RESTY_CACHE.tar.gz"
@@ -605,6 +608,7 @@ WITH_FLAGS="--with-debug \
   --with-http_realip_module \
   --with-http_auth_request_module \
   --with-http_addition_module \
+  --with-http_geoip_module \
   --with-http_gzip_static_module \
   --with-http_sub_module \
   --with-http_v2_module \

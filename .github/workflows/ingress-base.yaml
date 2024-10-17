@@ -15,9 +15,14 @@ on:
         description: 'branch or tag name, should compatibe with SCRIPT_VERSION'
         required: true
         default: 'release-1.9'
+      arch:
+        description: 'arch'
+        required: true
+        default: 'amd64'
 env:
   PROJECT: ingress-nginx
   BRANCH: release-1.9 # NOTICE, SCRIPT_VERSION must comtible
+  ARCH: amd64
   SCRIPT_VERSION: 1.9
   REGISTRY_NAME: "docker.io"
   REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
