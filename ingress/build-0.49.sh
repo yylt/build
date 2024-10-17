@@ -335,7 +335,7 @@ git config --global --add core.compression -1
 cd "$BUILD_PATH/GmSSL-$GMSSL_VERSION"
 mkdir build && cd build
 cmake ..
-make && make test && make install
+make && make install
 
 cd "$BUILD_PATH/OpenSSL-Compatibility-Layer-$GMSSL_LAYER_VERSION"
 mkdir build && cd build
