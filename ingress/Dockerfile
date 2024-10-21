@@ -1,11 +1,22 @@
-FROM debian:11-slim as builder
+FROM docker.io/library/debian:11-slim as builder
+
+ARG http_proxy
+ARG https_proxy
+
+ENV http_proxy=$http_proxy
+ENV https_proxy=$https_proxy
 
 COPY . /
-
 RUN /build.sh
 
 # Use a multi-stage build
-FROM debian:11-slim
+FROM docker.io/library/debian:11-slim
+
+ARG http_proxy
+ARG https_proxy
+
+ENV http_proxy=$http_proxy
+ENV https_proxy=$https_proxy
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
 
@@ -26,6 +37,8 @@ RUN apt-get update && \
         zlib1g-dev \
         libmaxminddb-dev \
         libxslt1-dev \
+        libssl-dev \
+        libssl3 \
         libgeoip-dev \
         ca-certificates \
         patch \
@@ -38,8 +51,8 @@ RUN apt-get update && \
         libmaxminddb-dev \
         libyaml-cpp-dev \
         coreutils \
-        tzdata \
-  &&  rm -rf /var/lib/apt/lists/* \
+        tzdata dumb-init diffutils libcap2-bin \
+  && rm -rf /var/lib/apt/lists/* \
   && ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && bash -eu -c ' \
   writeDirs=( \

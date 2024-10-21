@@ -1,11 +1,5 @@
 name: "Setup"
 description: "install docker and qemu"
-inputs:
-  root:
-    description: |
-      Project root directory.
-      Default '.'
-    default: '.'
 runs:
   using: composite
   steps:

@@ -1,0 +1,80 @@
+name: "Setup"
+description: "install docker and qemu"
+inputs:
+  REGISTRY_NAME:
+    description: '镜像仓库'
+    required: true
+    default: ''
+  PROJECT:
+    description: '项目名称，进入该目录再执行'
+    required: true
+    default: ''
+  SCRIPT_VERSION:
+    description: '使用的build脚本的版本'
+    required: true
+    default: ''
+  SKIP_INGRESS:
+    description: '跳过ingress 构建, y 表示跳过'
+    required: false
+    default: 'n'
+  GMSSL:
+    description: '使用 gmssl, 默认y, 即默认使用gmssl'
+    required: false
+    default: 'y'
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -ex
+
+        ARCH=arm64
+        if [ $(arch) = "x86_64" ];then
+            ARCH=amd64    
+        fi
+
+        export ARCH=${ARCH}
+        export PLATFORM=linux/${ARCH}
+        export REGISTRY=${{ inputs.REGISTRY_NAME }}/yylt
+        export BASE_IMAGE=${REGISTRY}/ingress:${ARCH}-base-${{ inputs.SCRIPT_VERSION }}
+
+        # 覆盖, 支持 sm 密码 ssl 库
+        cp -f ingress/build-${{ inputs.SCRIPT_VERSION }}.sh ${{ inputs.PROJECT }}/images/nginx/rootfs/build.sh
+        cp -f ingress/Dockerfile ${{ inputs.PROJECT }}/images/nginx/rootfs/Dockerfile
+        cp -f ingress/Dockerfile-ingress ${{ inputs.PROJECT }}/rootfs/Dockerfile
+
+        # 删除 openssl 相关
+        if [ ${{ inputs.GMSSL }} = "y" ];then
+            sed -i '/libssl/d' ${{ inputs.PROJECT }}/images/nginx/rootfs/Dockerfile
+        fi
+
+        # build 
+        cd ${{ inputs.PROJECT }}
+        args=""
+
+        # 检查 https_proxy 是否已设置, 设置意味着在国内环境
+        https_proxy_value=$(echo $HTTPS_PROXY)
+        if [ -n "$https_proxy_value" ]; then
+          docker buildx rm mybuilder -f || echo "done"
+          docker buildx create --use --name mybuilder --driver-opt env.http_proxy=$https_proxy_value --driver-opt env.https_proxy=$https_proxy_value
+          docker buildx use mybuilder
+          args="--build-arg http_proxy=$https_proxy_value --build-arg https_proxy=$https_proxy_value"
+          sed -i '46i export GOPROXY=https://goproxy.cn,direct' build/build.sh
+        fi
+
+        # base base image
+        docker buildx build \
+          --no-cache \
+          --platform ${PLATFORM} \
+          $args \
+          --output "type=image,push=true" \
+          --tag ${BASE_IMAGE} \
+          --file ./images/nginx/rootfs/Dockerfile ./images/nginx/rootfs
+
+        # build ingress image
+        if [ ${{ inputs.SKIP_INGRESS }} = "y" ];then
+            exit
+        fi
+        make build && make image
+        docker tag ${REGISTRY}/controller:$(cat TAG) ${REGISTRY}/ingress:${ARCH}-${{ inputs.SCRIPT_VERSION }}
+        docker push ${REGISTRY}/ingress:${ARCH}-${{ inputs.SCRIPT_VERSION }}

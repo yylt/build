@@ -17,16 +17,16 @@ on:
         default: 'release-1.9'
 env:
   PROJECT: ingress-nginx
-  BRANCH:  release-1.9 # release-1.9 or nginx-0.49.3-es, SCRIPT_VERSION must comtible
-  SCRIPT_VERSION: 1.9 #1.9 or 0.49 
+  BRANCH:  nginx-0.49.3-es # release-1.9 or nginx-0.49.3-es, SCRIPT_VERSION must comtible
+  SCRIPT_VERSION: 0.49  #1.9 or 0.49 
   REGISTRY_NAME: "docker.io"
   REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
   REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
 
 jobs:
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build x86
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/setup
@@ -48,11 +48,6 @@ jobs:
     - name: Setting
       run: |
         set -x
-        echo "ARCH=arm64"  >> $GITHUB_ENV  
-        if [ $(arch) = "x86_64" ];then
-            echo "ARCH=amd64"  >> $GITHUB_ENV      
-        fi
-
         if ${{ github.event_name == 'workflow_dispatch' }} ; then
             echo "BRANCH=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
             echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV 
@@ -61,38 +56,50 @@ jobs:
         echo "trigger by ${{ github.event_name }}"
         echo "BRANCH is ${{ env.BRANCH }}"
         echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
-        echo "ARCH is ${{ env.ARCH }}"
 
     - name: Image Build And Push
-      shell: bash
+      uses: ./.github/actions/ingress
+      with:
+        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
+        PROJECT: ${{ env.PROJECT }}
+        SCRIPT_VERSION: ${{ env.SCRIPT_VERSION }}
+
+  build-arm64:
+    name: Build arm64
+    runs-on: [self-hosted, linux, arm64]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: easystack/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }} 
+        path: ${{ env.PROJECT }}
+
+    - name: Setting
       run: |
-        set -ex
-        export ARCH=${{ env.ARCH }}
-        export REGISTRY=${{ env.REGISTRY_NAME }}/yylt
-        export BASE_IMAGE=${REGISTRY}/ingress:${ARCH}-base-${{ env.SCRIPT_VERSION }}
+        set -x
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "BRANCH=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV 
+        fi
 
-        # 覆盖, 支持 sm 密码 ssl 库
-        cp -f ingress/build-${{ env.SCRIPT_VERSION }}.sh ${{ env.PROJECT }}/images/nginx/rootfs/build.sh
-        cp -f ingress/Dockerfile-${{ env.SCRIPT_VERSION }} ${{ env.PROJECT }}/images/nginx/rootfs/Dockerfile
-        cp -f ingress/Dockerfile-ingress-${{ env.SCRIPT_VERSION }} ${{ env.PROJECT }}/rootfs/Dockerfile
-        
-        # 删除 openssl 相关
-        sed -i '/openssl/d' ${{ env.PROJECT }}/images/nginx/rootfs/Dockerfile
+        echo "trigger by ${{ github.event_name }}"
+        echo "BRANCH is ${{ env.BRANCH }}"
+        echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
 
-        # build 
-        cd ${{ env.PROJECT }}
-
-        # base base image
-        docker buildx build \
-          --no-cache \
-          --platform linux/${ARCH} \
-          --output "type=image,push=true" \
-          --tag ${BASE_IMAGE} \
-          --file ./images/nginx/rootfs/Dockerfile ./images/nginx/rootfs
-
-        # build ingress image
-        
-        export PLATFORM=linux/${ARCH}
-        make build && make image
-        docker tag ${REGISTRY}/controller:$(cat TAG) ${REGISTRY}/ingress:${ARCH}-${{ env.SCRIPT_VERSION }}
-        docker push ${REGISTRY}/ingress:${ARCH}-${{ env.SCRIPT_VERSION }}
+    - name: Image Build And Push
+      uses: ./.github/actions/ingress
+      with:
+        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
+        PROJECT: ${{ env.PROJECT }}
+        SCRIPT_VERSION: ${{ env.SCRIPT_VERSION }}
