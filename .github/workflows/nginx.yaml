@@ -1,0 +1,81 @@
+name: nginx
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ nginx ]
+  workflow_dispatch:
+env:
+  PROJECT: ingress-nginx
+  BRANCH: controller-v1.11.3
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+
+jobs:
+  build-x86:
+    name: Build x86
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - uses: actions/checkout@v4
+      with:
+        repository: kubernetes/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        path: ${{ env.PROJECT }}
+
+    - shell: bash
+      run: |
+        cp -f ingress/Dockerfile-nginx ingress/Dockerfile
+        cp -a ${{ env.PROJECT }}/rootfs/etc/nginx ${{ env.PROJECT }}/images/nginx/rootfs/
+
+    - name: Image Build And Push
+      uses: ./.github/actions/ingress
+      with:
+        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
+        PROJECT: ${{ env.PROJECT }}
+        SCRIPT_VERSION: nginx
+        NO_GMSSL: y
+        SKIP_INGRESS: y
+
+  build-arm64:
+    name: Build arm64
+    runs-on: [self-hosted, linux, arm64]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - uses: actions/checkout@v4
+      with:
+        repository: kubernetes/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        path: ${{ env.PROJECT }}
+
+    - shell: bash
+      run: |
+        cp -f ingress/Dockerfile-nginx ingress/Dockerfile
+        cp -a ${{ env.PROJECT }}/rootfs/etc/nginx ${{ env.PROJECT }}/images/nginx/rootfs/
+
+    - name: Image Build And Push
+      uses: ./.github/actions/ingress
+      with:
+        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
+        PROJECT: ${{ env.PROJECT }}
+        SCRIPT_VERSION: nginx
+        NO_GMSSL: y
+        SKIP_INGRESS: y
+
