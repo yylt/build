@@ -49,9 +49,7 @@ RUN bash -xeu -c ' \
 
 ENV LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends dumb-init diffutils libcap2-bin \
-    && setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
+RUN setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
     && setcap -v cap_net_bind_service=+ep /nginx-ingress-controller \
     && setcap    cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
     && setcap -v cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
@@ -59,8 +57,7 @@ RUN apt-get update \
     && setcap -v cap_net_bind_service=+ep /usr/bin/dumb-init \
     && ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log \
-    rm -rf /var/lib/apt/lists/* 
+    && ln -sf /dev/stderr /var/log/nginx/error.log
 
 USER www-data
 

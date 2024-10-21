@@ -20,11 +20,16 @@ set -o pipefail
 
 export NGINX_VERSION=1.19.9
 
-# Check for recent changes: https://github.com/guanzhi/GmSSL/compare/v3.3.1...master
-export GMSSL_VERSION=34fa519dc0f94a9a3995d9daf09c84cdac37abd8
+# 方案1：参考 https://www.gmssl.cn/gmssl/index.jsp，
+# 方案2在 1.9 版本测试无法通过，故不添加
+gmssl="https://www.gmssl.cn/gmssl/down/gmssl_openssl_1.1_b2024_aarch64_1.tar.gz"   
+gmssl_sha256="b8aa4c46858b8f9fcfb2cd4522ccdcf95fbf9b90176a1b4b7d5e87ba627857e1"   
 
-# Check for recent changes: https://github.com/GmSSL/OpenSSL-Compatibility-Layer/compare/v0.8.1...master
-export GMSSL_LAYER_VERSION=4c9b076a980652df1e0cc2eef2e430f07f239588
+# arch decide gmssl_openssl 
+if [ $(arch) = "x86_64" ];then
+    gmssl="https://www.gmssl.cn/gmssl/down/gmssl_openssl_1.1_b2024_x64_1.tar.gz"   
+    gmssl_sha256="bd938829014ed18713661beaefdec33f7dd407fffdcb0a1fe544e2afe30a3622"     
+fi
 
 # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.1...master
 export NDK_VERSION=0.3.1
@@ -150,42 +155,45 @@ get_src()
   tar xzf "$f"
   rm -rf "$f"
 }
-
 # install required packages to build
-apk add \
+apt-get update && \
+apt-get install -y --no-install-recommends \
   bash \
   gcc \
   clang \
   libc-dev \
   make \
   automake \
-  pcre-dev \
-  zlib-dev \
-  linux-headers \
-  libxslt-dev \
-  gd-dev \
-  geoip-dev \
-  perl-dev \
-  libedit-dev \
-  mercurial \
-  alpine-sdk \
-  findutils \
-  curl ca-certificates \
-  patch \
-  libaio-dev \
   cmake \
   util-linux \
-  lmdb-tools \
+  libpcre3 \
+  libpcre3-dev \
+  zlib1g \
+  zlib1g-dev \
+  libmaxminddb-dev \
+  libxslt1-dev \
+  libgeoip-dev \
+  libperl-dev \
+  libedit-dev \
+  libgd-dev \
+  mercurial \
+  findutils \
+  curl \
+  ca-certificates \
+  patch \
+  libaio-dev \
+  lmdb-utils \
   wget \
-  curl-dev \
-  libprotobuf \
-  git g++ pkgconf flex bison doxygen yajl-dev lmdb-dev libtool autoconf libxml2 libxml2-dev \
+  libcurlpp-dev \
+  libprotobuf-dev \
+  libyajl-dev \
+  git g++ pkgconf flex bison doxygen libtool autoconf libxml2 libxml2-dev \
   python3 \
   libmaxminddb-dev \
   bc \
   unzip \
   dos2unix \
-  yaml-cpp \
+  libyaml-cpp-dev \
   coreutils
 
 mkdir -p /etc/nginx
@@ -194,11 +202,8 @@ mkdir --verbose -p "$BUILD_PATH"
 cd "$BUILD_PATH"
 
 # download, verify and extract the source files
-get_src c34cc5536f1c1642cc0a1c7d1c7e077a5fe03be8f80c0794de63e2002f477990 \
-         https://github.com/guanzhi/GmSSL/archive/$GMSSL_VERSION.tar.gz
-
-get_src 271bf6d5c7e070534ae0f464b3d807c64bc22333ec1c7db44e084d22bb581093 \
-         https://github.com/GmSSL/OpenSSL-Compatibility-Layer/archive/$GMSSL_LAYER_VERSION.tar.gz
+get_src ${gmssl_sha256} \
+        ${gmssl}
 
 get_src 2e35dff06a9826e8aca940e9e8be46b7e4b12c19a48d55bfc2dc28fc9cc7d841 \
         "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
@@ -330,17 +335,9 @@ cd "$BUILD_PATH"
 # Git tuning
 git config --global --add core.compression -1
 
+# copy gmssl 
+cp -r "$BUILD_PATH/gmssl" /usr/local/
 
-# build gmssl && gmssl_compatibility_layer
-cd "$BUILD_PATH/GmSSL-$GMSSL_VERSION"
-mkdir build && cd build
-cmake ..
-make && make install
-
-cd "$BUILD_PATH/OpenSSL-Compatibility-Layer-$GMSSL_LAYER_VERSION"
-mkdir build && cd build
-cmake ..
-make &&  make install
 
 # build opentracing lib
 cd "$BUILD_PATH/opentracing-cpp-$OPENTRACING_CPP_VERSION"
@@ -561,6 +558,7 @@ Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTE
 
 # build nginx
 cd "$BUILD_PATH/nginx-$NGINX_VERSION"
+sed -i 's|OPENSSL/\.openssl|OPENSSL|g' auto/lib/openssl/conf #方案一
 
 # apply nginx patches
 for PATCH in `ls /patches`;do
@@ -571,6 +569,7 @@ done
 WITH_FLAGS="--with-debug \
   --with-compat \
   --with-pcre-jit \
+  --with-openssl="/usr/local/gmssl" \
   --with-http_ssl_module \
   --with-http_stub_status_module \
   --with-http_realip_module \
@@ -599,10 +598,11 @@ CC_OPT="-g -Og -fPIE -fstack-protector-strong \
   --param=ssp-buffer-size=4 \
   -DTCP_FASTOPEN=23 \
   -fPIC \
+  -I/usr/local/gmssl/include \
   -I$HUNTER_INSTALL_DIR/include \
   -Wno-cast-function-type"
 
-LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now -L$HUNTER_INSTALL_DIR/lib"
+LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now -L/usr/local/gmssl/lib -L$HUNTER_INSTALL_DIR/lib"
 
 if [[ ${ARCH} != "aarch64" ]]; then
   WITH_FLAGS+=" --with-file-aio"
@@ -729,9 +729,6 @@ writeDirs=( \
   /var/log/audit \
   /var/log/nginx \
 );
-
-addgroup -Sg 101 www-data
-adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
 
 for dir in "${writeDirs[@]}"; do
   mkdir -p ${dir};
