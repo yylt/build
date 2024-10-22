@@ -17,7 +17,7 @@ on:
         default: 'release-1.9'
 env:
   PROJECT: ingress-nginx
-  BRANCH:  nginx-0.49.3-es # release-1.9 or nginx-0.49.3-es, SCRIPT_VERSION must comtible
+  BRANCH:  gmssl # release-1.9 or nginx-0.49.3-es, SCRIPT_VERSION must comtible
   SCRIPT_VERSION: 0.49  #1.9 or 0.49 
   REGISTRY_NAME: "docker.io"
   REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
@@ -37,14 +37,6 @@ jobs:
         username: ${{ env.REGISTRY_USER }}
         password: ${{ env.REGISTRY_PASS }}
 
-    - name: Check out build code
-      uses: actions/checkout@v4
-      with:
-        repository: easystack/${{ env.PROJECT }}
-        ref: ${{ env.BRANCH }}
-        token: ${{ secrets.KPULL }} 
-        path: ${{ env.PROJECT }}
-
     - name: Setting
       run: |
         set -x
@@ -56,6 +48,15 @@ jobs:
         echo "trigger by ${{ github.event_name }}"
         echo "BRANCH is ${{ env.BRANCH }}"
         echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: easystack/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }} 
+        path: ${{ env.PROJECT }}
+
 
     - name: Image Build And Push
       uses: ./.github/actions/ingress
@@ -77,14 +78,6 @@ jobs:
         username: ${{ env.REGISTRY_USER }}
         password: ${{ env.REGISTRY_PASS }}
 
-    - name: Check out build code
-      uses: actions/checkout@v4
-      with:
-        repository: easystack/${{ env.PROJECT }}
-        ref: ${{ env.BRANCH }}
-        token: ${{ secrets.KPULL }} 
-        path: ${{ env.PROJECT }}
-
     - name: Setting
       run: |
         set -x
@@ -96,6 +89,14 @@ jobs:
         echo "trigger by ${{ github.event_name }}"
         echo "BRANCH is ${{ env.BRANCH }}"
         echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: easystack/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }} 
+        path: ${{ env.PROJECT }}
 
     - name: Image Build And Push
       uses: ./.github/actions/ingress
