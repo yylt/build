@@ -2,6 +2,9 @@ ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE}
 
+ENV http_proxy=""
+ENV https_proxy=""
+
 ARG TARGETARCH
 ARG VERSION
 ARG COMMIT_SHA
