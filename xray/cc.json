@@ -1,45 +1,43 @@
 {
-    "log": {
-        "loglevel": "warning"
-      },    
-    "outbounds": [
-      {
-        "tag": "free",
-        "protocol": "freedom"
-      }
-    ],
-    "inbounds": [
-      {
-        "port": 3000,
-        "tag": "vless",
-        "listen": "127.0.0.1",
-        "protocol": "vless",
-        "streamSettings": {
-          "network": "tcp",
-          "security": "xtls",
-          "xtlsSettings": {
-            "serverName": "yylt.github.io",
-            "alpn":["http/1.1"],
-            "certificates": [
-                {
-                  "certificateFile": "/tmp/xray/client.pem",
-                  "keyFile": "/tmp/xray/client-key.pem"
-                }
-              ]
-          }
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 3000,
+      "protocol": "trojan",
+      "settings": {
+        "clients": [{"password": "password"}]
+      },
+      "streamSettings": {
+        "network": "grpc",
+        "sockops": {
+          "tcpNoDelay": true,
+          "tcpCongestion": "bbr"
         },
-        "settings": {
-          "decryption": "none",
-          "clients": [
-            {
-              "level": 0,
-              "security": "none",
-              "flow": "xtls-rprx-direct",
-              "id": "b3e82297-eab7-0f26-d714-a2091305b910"
-            }
-          ]
+        "grpcSettings": {
+          "serviceName": "io"
+        },
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [{
+            "certificateFile": "xray/client.pem",
+            "keyFile": "xray/client-key.pem"
+          }]
         }
       }
-    ]
-  }
-  
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "free",
+      "sockopt": {
+        "tcpNoDelay": true,
+        "tcpCongestion": "bbr"
+      },
+      "protocol": "freedom"
+    }
+  ]
+}
+
