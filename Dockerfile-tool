@@ -31,13 +31,14 @@ ARG TARGETARCH
 # COPY --from=helm /usr/bin/helm /usr/bin/
 # COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
 
-RUN apk -U --no-cache add curl jq git bash netcat-openbsd wrk buildah python3 openssh py3-pip && \
+RUN apk -U --no-cache add curl jq git bash netcat-openbsd wrk buildah python3 openssh py3-pip buildah podman skopeo && \
     pip3 install --break-system-packages requests
 
 # RUN pip3 install --no-cache-dir  s3cmd 
 # COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
 # COPY --from=builder /workspace/usr/local/bin/crictl /usr/bin/
 # COPY --from=builder /workspace/gomplate /usr/bin/
+
 COPY --from=builder /workspace/crane /usr/bin/
 COPY --from=builder /workspace/yq /usr/bin/
 COPY --from=builder /workspace/mc /usr/bin/

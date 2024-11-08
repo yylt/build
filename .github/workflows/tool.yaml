@@ -62,7 +62,7 @@ jobs:
     - name: Docker Buildx (push)
       run: |
         docker buildx build --no-cache \
-          --platform linux/arm64,linux/amd64 \
+          --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
           --tag ${{ env.REGISTRY_NAME }}/yylt/tool:latest \
           --tag ${{ env.REGISTRY_NAME }}/yylt/tool:${{ env.date }} \
