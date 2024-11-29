@@ -36,6 +36,7 @@ jobs:
     - shell: bash
       run: |
         cp -f ingress/Dockerfile-nginx ingress/Dockerfile
+        cp -a ingress/patches/*  ${{ env.PROJECT }}/images/nginx/rootfs/patches/
         cp -a ${{ env.PROJECT }}/rootfs/etc/nginx ${{ env.PROJECT }}/images/nginx/rootfs/
 
     - name: Image Build And Push
@@ -68,6 +69,7 @@ jobs:
     - shell: bash
       run: |
         cp -f ingress/Dockerfile-nginx ingress/Dockerfile
+        cp -a ingress/patches/*  ${{ env.PROJECT }}/images/nginx/rootfs/patches/
         cp -a ${{ env.PROJECT }}/rootfs/etc/nginx ${{ env.PROJECT }}/images/nginx/rootfs/
 
     - name: Image Build And Push

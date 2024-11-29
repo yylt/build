@@ -1,0 +1,73 @@
+From e058a9fe5370577c4b8d722dde6bb1f4063def3c Mon Sep 17 00:00:00 2001
+From: Aperence <anthony.doeraene@hotmail.com>
+Date: Fri, 6 Sep 2024 20:27:36 +0200
+Subject: [PATCH] Core: added socket protocol
+
+Multipath TCP (MPTCP), standardized in RFC8684 [1], is a TCP extension
+that enables a TCP connection to use different paths.
+
+Multipath TCP has been used for several use cases. On smartphones, MPTCP
+enables seamless handovers between cellular and Wi-Fi networks while
+preserving Established connections. This use-case is what pushed Apple
+to use MPTCP since 2013 in multiple applications [2]. On dual-stack
+hosts, Multipath TCP enables the TCP connection to automatically use the
+best performing path, either IPv4 or IPv6. If one path fails, MPTCP
+automatically uses the other path.
+
+The benefit from MPTCP, both the client and the server have to support
+it. Multipath TCP is a backward-compatible TCP extension that is enabled
+by default on recent Linux distributions (Debian, Ubuntu, Redhat, ...).
+Multipath TCP is included in the Linux kernel since version 5.6 [3].
+To use it on Linux, an application must explicitly enable it when
+creating the socket. No need to change anything else in the application.
+
+Even if MPTCP is supported by different OS, only Linux supports the
+`IPPROTO_MPTCP` protocol, which is why this feature is currently
+limited to Linux only.
+
+This patch updates the creation of listening sockets to use a new field
+of the `ngx_listening_s` structure. The `protocol` field can be used in
+conjunction with the `type` to specify the protocol to be used.
+
+Modules will then be able to specify a different protocol, e.g.
+IPPROTO_MPTCP.
+
+Co-authored-by: Maxime Dourov <mux99@live.be>
+
+Link: https://www.rfc-editor.org/rfc/rfc8684.html [1]
+Link: https://www.tessares.net/apples-mptcp-story-so-far/ [2]
+Link: https://www.mptcp.dev [3]
+---
+ src/core/ngx_connection.c | 3 ++-
+ src/core/ngx_connection.h | 1 +
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/ngx_connection.c b/src/core/ngx_connection.c
+index 75809d9ad..eb6b6af5c 100644
+--- a/src/core/ngx_connection.c
++++ b/src/core/ngx_connection.c
+@@ -487,7 +487,8 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
+                 continue;
+             }
+ 
+-            s = ngx_socket(ls[i].sockaddr->sa_family, ls[i].type, 0);
++            s = ngx_socket(ls[i].sockaddr->sa_family, ls[i].type,
+++                           ls[i].protocol);
+ 
+             if (s == (ngx_socket_t) -1) {
+                 ngx_log_error(NGX_LOG_EMERG, log, ngx_socket_errno,
+diff --git a/src/core/ngx_connection.h b/src/core/ngx_connection.h
+index 84dd80442..80caaf741 100644
+--- a/src/core/ngx_connection.h
++++ b/src/core/ngx_connection.h
+@@ -24,6 +24,7 @@ struct ngx_listening_s {
+     ngx_str_t           addr_text;
+ 
+     int                 type;
++    int                 protocol;
+ 
+     int                 backlog;
+     int                 rcvbuf;
+-- 
+2.34.1
+

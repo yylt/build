@@ -1,0 +1,114 @@
+From f33492028ea1bc89d72371eb04d91f1477306b48 Mon Sep 17 00:00:00 2001
+From: Aperence <anthony.doeraene@hotmail.com>
+Date: Fri, 6 Sep 2024 20:29:32 +0200
+Subject: [PATCH] HTTP: added MPTCP support.
+
+Multipath TCP (MPTCP), standardized in RFC8684 [1], is a TCP extension
+that enables a TCP connection to use different paths.
+
+Multipath TCP has been used for several use cases. On smartphones, MPTCP
+enables seamless handovers between cellular and Wi-Fi networks while
+preserving Established connections. This use-case is what pushed Apple
+to use MPTCP since 2013 in multiple applications [2]. On dual-stack
+hosts, Multipath TCP enables the TCP connection to automatically use the
+best performing path, either IPv4 or IPv6. If one path fails, MPTCP
+automatically uses the other path.
+
+The benefit from MPTCP, both the client and the server have to support
+it. Multipath TCP is a backward-compatible TCP extension that is enabled
+by default on recent Linux distributions (Debian, Ubuntu, Redhat, ...).
+Multipath TCP is included in the Linux kernel since version 5.6 [3].
+To use it on Linux, an application must explicitly enable it when
+creating the socket. No need to change anything else in the application.
+
+Even if MPTCP is supported by different OS, only Linux supports the
+`IPPROTO_MPTCP` protocol, which is why this feature is currently
+limited to Linux only.
+
+This patch adds a new parameter 'multipath' to the 'listen' directive
+in the HTTP module. This new parameter is only compatible with TCP if
+IPPROTO_MPTCP is defined, not with QUIC so far.
+
+Co-authored-by: Maxime Dourov <mux99@live.be>
+
+Link: https://www.rfc-editor.org/rfc/rfc8684.html [1]
+Link: https://www.tessares.net/apples-mptcp-story-so-far/ [2]
+Link: https://www.mptcp.dev [3]
+---
+ contrib/vim/syntax/nginx.vim    |  2 +-
+ src/http/ngx_http.c             |  1 +
+ src/http/ngx_http_core_module.c | 13 +++++++++++++
+ src/http/ngx_http_core_module.h |  1 +
+ 4 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/contrib/vim/syntax/nginx.vim b/contrib/vim/syntax/nginx.vim
+index 29eef7a23..ea7c58464 100644
+--- a/contrib/vim/syntax/nginx.vim
++++ b/contrib/vim/syntax/nginx.vim
+@@ -65,7 +65,7 @@ syn match ngxListenComment '#.*$'
+     \ contained
+     \ nextgroup=@ngxListenParams skipwhite skipempty
+ syn keyword ngxListenOptions contained
+-    \ default_server ssl quic proxy_protocol
++    \ default_server ssl quic proxy_protocol multipath
+     \ setfib fastopen backlog rcvbuf sndbuf accept_filter deferred bind
+     \ ipv6only reuseport so_keepalive
+     \ nextgroup=@ngxListenParams skipwhite skipempty
+diff --git a/src/http/ngx_http.c b/src/http/ngx_http.c
+index d835f896e..c00b2e27b 100644
+--- a/src/http/ngx_http.c
++++ b/src/http/ngx_http.c
+@@ -1845,6 +1845,7 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
+ #endif
+ 
+     ls->type = addr->opt.type;
++    ls->protocol = addr->opt.protocol;
+     ls->backlog = addr->opt.backlog;
+     ls->rcvbuf = addr->opt.rcvbuf;
+     ls->sndbuf = addr->opt.sndbuf;
+diff --git a/src/http/ngx_http_core_module.c b/src/http/ngx_http_core_module.c
+index 033a3bf64..9c539310a 100644
+--- a/src/http/ngx_http_core_module.c
++++ b/src/http/ngx_http_core_module.c
+@@ -4049,6 +4049,13 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+         }
+ #endif
+ 
++#ifdef IPPROTO_MPTCP
++        if (ngx_strcmp(value[n].data, "multipath") == 0) {
++            lsopt.protocol = IPPROTO_MPTCP;
++            continue;
++        }
++#endif
++
+         if (ngx_strncmp(value[n].data, "backlog=", 8) == 0) {
+             lsopt.backlog = ngx_atoi(value[n].data + 8, value[n].len - 8);
+             lsopt.set = 1;
+@@ -4338,6 +4345,12 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+         }
+ #endif
+ 
++#ifdef IPPROTO_MPTCP
++        if (lsopt.protocol == IPPROTO_MPTCP) {
++             return "\"multipath\" parameter is incompatible with \"quic\"";
++        }
++#endif
++
+ #if (NGX_HTTP_V2)
+         if (lsopt.http2) {
+             return "\"http2\" parameter is incompatible with \"quic\"";
+diff --git a/src/http/ngx_http_core_module.h b/src/http/ngx_http_core_module.h
+index 765e7ff60..9862eaa27 100644
+--- a/src/http/ngx_http_core_module.h
++++ b/src/http/ngx_http_core_module.h
+@@ -88,6 +88,7 @@ typedef struct {
+     int                        rcvbuf;
+     int                        sndbuf;
+     int                        type;
++    int                        protocol;
+ #if (NGX_HAVE_SETFIB)
+     int                        setfib;
+ #endif
+-- 
+2.34.1
+
