@@ -1,0 +1,12 @@
+FROM rancher/nginx-ingress-controller-defaultbackend:1.5-rancher2 
+
+# FROM busybox
+
+# RUN case "$(arch)" in \
+#         aarch64) file='server-arm64' ;; \
+#         x86_64) file='server' ;; \
+#     esac; 
+# USER 65534:65534
+# COPY --from=builder /$file /server
+
+# ENTRYPOINT ["/server"]
