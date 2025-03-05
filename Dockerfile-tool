@@ -16,7 +16,7 @@ RUN apt-get update && \
     curl -L -k https://github.com/hairyhenderson/gomplate/releases/download/v3.11.5/gomplate_linux-$TARGETARCH -o gomplate && chmod +x gomplate
 
 FROM annupadhdhyay/helm2:2.12.3 as helm
-FROM bitnami/kubectl:1.25 as kube
+FROM bitnami/kubectl:1.31 as kube
 
 # FROM debian:stable-slim
 # RUN apt-get update && \
@@ -29,10 +29,11 @@ ARG TARGETARCH
 # COPY ./entrypoint/kubernetes-entrypoint_$TARGETARCH /usr/bin/kubernetes-entrypoint
 # COPY ./gotpl/gotpl_$TARGETARCH /usr/bin/gotpl
 # COPY --from=helm /usr/bin/helm /usr/bin/
-# COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
+COPY --from=kube /opt/bitnami/kubectl/bin/kubectl /usr/bin/
 
 RUN apk -U --no-cache add curl jq git bash netcat-openbsd wrk buildah python3 openssh py3-pip buildah podman skopeo && \
-    pip3 install --break-system-packages requests
+    pip3 install --break-system-packages requests && \
+    apk -U --no-cache add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing cfssl 
 
 # RUN pip3 install --no-cache-dir  s3cmd 
 # COPY --from=builder /workspace/usr/local/bin/ctr /usr/bin/
