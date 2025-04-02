@@ -19,18 +19,21 @@ on:
 
 env:
   Dockerfile: Dockerfile-tool
-  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
-  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
-  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
-  # REGISTRY_NAME: "docker.io"
-  # REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
-  # REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+  # REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  # REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  # REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
 
 jobs:
   build:
     name: Build 
     runs-on: ubuntu-22.04
     steps:
+    - name: Get date
+      run: |
+        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
     - uses: actions/checkout@v4
     - uses: ./.github/actions/setup
     - uses: docker/login-action@v2
@@ -44,5 +47,6 @@ jobs:
         docker buildx build --no-cache \
           --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
-          --tag ${{ env.REGISTRY_NAME }}/captain/etcd-tmpfs:v3.5.19 \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/tool:${{ env.date }} \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/tool:latest \
           --file ./${{ env.Dockerfile }} ./
