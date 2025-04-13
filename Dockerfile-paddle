@@ -1,0 +1,32 @@
+
+FROM python:3.11.12-bookworm
+
+# only x86_64 is supported, 2.3.2 version
+ARG RKNN_TOOLKIT_WHL=https://github.com/airockchip/rknn-toolkit2/raw/v2.3.2/rknn-toolkit2/packages/x86_64/rknn_toolkit2-2.3.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        ccache \
+        build-essential \
+        gcc vim libprotobuf-dev zlib1g zlib1g-dev libsm6 \
+        libgl1 libglib2.0-0 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# 使用 pip3 安装 Python 包
+RUN pip3 install --no-cache-dir ${RKNN_TOOLKIT_WHL} PyYAML paddlepaddle paddle2onnx torch==1.13.1 
+
+ENV PATH="/usr/lib/ccache:${PATH}"
+
+RUN rm -rf /etc/apt/sources.list.d/* && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib non-free non-free-firmware" > /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm-updates main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm-backports main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
+    apt-get update && \
+    pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip3 config set install.trusted-host pypi.tuna.tsinghua.edu.cn
+
