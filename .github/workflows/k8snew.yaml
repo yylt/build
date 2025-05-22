@@ -1,0 +1,81 @@
+name: k8snew
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ k8snew ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'kubernetes branch'
+        required: true
+        default: 'v1.32.2'
+
+env:
+  REPO: easystack/kubernetes
+  PROJECT: kubernetes
+  BRANCH: v1.32.2-es
+  Dockerfile: Dockerfile-k8snew
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+        else
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+        fi
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.REPO }}
+        ref: ${{ env.vbranch }}
+        token: ${{ secrets.KPULL }}  
+        path: ${{ env.PROJECT }}
+
+    - name: Docker Image(amd64) Build And Push
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build --no-cache \
+          --platform linux/amd64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --build-arg "VERSION=${{ env.vbranch }}" \
+          --tag ${{ env.REGISTRY_NAME }}/captain/hyperkube:${{ env.vbranch }} \
+          --tag ${{ env.REGISTRY_NAME }}/production/hyperkube:${{ env.vbranch }} \
+          --file ../${{ env.Dockerfile }} .
+
+    - name: Docker Image(arm64) Build And Push
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build --no-cache \
+          --platform linux/arm64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --build-arg "VERSION=${{ env.vbranch }}" \
+          --tag ${{ env.REGISTRY_NAME }}/arm64v8/hyperkube:${{ env.vbranch }} \
+          --file ../${{ env.Dockerfile }} .
+
