@@ -1,0 +1,33 @@
+FROM --platform=$BUILDPLATFORM golang:1.24.3-bullseye AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETPLATFORM
+ARG VERSION
+
+WORKDIR /app
+COPY . .
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends rsync && \
+    export KUBE_GIT_COMMIT="" && \
+    export KUBE_GIT_VERSION=${VERSION} && \
+    export KUBE_BUILD_PLATFORMS=${TARGETPLATFORM} && \
+    make kube-apiserver kubelet kube-proxy kube-controller-manager kube-scheduler kubectl
+
+
+FROM alpine:3.15
+
+ARG TARGETPLATFORM
+
+RUN apk -U --no-cache add ca-certificates \
+    e2fsprogs xfsprogs ebtables ethtool conntrack-tools \
+    iptables ipset bash kmod socat util-linux; \
+    echo 'hosts: files dns' > /etc/nsswitch.conf; \
+    rm -rf /sbin/iptables /sbin/iptables-save /sbin/iptables-restore; \
+    ln -s /sbin/xtables-nft-multi /sbin/iptables; \
+    ln -s /sbin/xtables-nft-multi /sbin/iptables-save; \
+    ln -s /sbin/xtables-nft-multi /sbin/iptables-restore
+
+# Copy kube binary
+COPY --from=builder /app/_output/local/bin/${TARGETPLATFORM}/kube* /
