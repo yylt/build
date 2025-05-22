@@ -1,0 +1,24 @@
+[package]
+name = "hello"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tonic = { version = "0.12", features = ["server"] }
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["cargo"] }
+log = "0.4"
+prost = "0.13"
+env_logger = "0.11"
+
+[build-dependencies]
+tonic-build = {version="0.12", features = ["prost"] }
+protobuf = "3"
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
+[[bin]]
+name = "client"
+path = "src/client.rs"

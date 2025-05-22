@@ -12,12 +12,8 @@ env:
   GO111MODULE: on 
   PROJECT: kata-containers
   BRANCH: stable-2.5
-  # image too big, failed to upload
-  REGISTRY_NAME: ghcr.io
-  ARM64: off
-  AMD64: on
-  CLOUD189_USER: ${{ secrets.CLOUD189_USER }}
-  CLOUD189_PASSWORD: ${{ secrets.CLOUD189_PASSWORD }}
+  ARM64: "on"
+  AMD64: "on"
   # MLNX_X64_URL: https://content.mellanox.com/ofed/MLNX_OFED-5.8-4.1.5.0/MLNX_OFED_LINUX-5.8-4.1.5.0-ubuntu22.04-x86_64.tgz
   # NVIDIA_X64_URL: https://us.download.nvidia.com/tesla/515.48.07/NVIDIA-Linux-x86_64-515.48.07.run  
   MLNX_X64_URL: ${{ secrets.MLNX_X64_URL }}  
@@ -27,23 +23,7 @@ jobs:
   karm64:
     name: Build arm64 kernel and image
     runs-on: [self-hosted, linux, arm64]
-    if: ${{ startsWith( github.env.ARM64, 'on') }}
-    outputs:
-      image: ${{ steps.data.outputs.image }}
     steps:
-    - name: Set Data
-      id: data
-      shell: bash
-      run: |
-        set -x
-        tag=$(date +'%Y%m%d%H%M')
-        if [[ "$(uname -m)" == "x86_64" ]]; then
-          arch=amd64
-        else
-          arch=arm64
-        fi
-        echo "image=${{ env.REGISTRY_NAME }}/yylt/ecr_$arch:$tag" >> "$GITHUB_OUTPUT"
-
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: 1.77.2
@@ -77,29 +57,11 @@ jobs:
       run: |
         cd kata-image
         ls -lht
-        #find . -maxdepth 1 -type f -name "*.img" -exec cloud189 up {} /  \;
-        #find . -maxdepth 1 -type f -name "*.container" -exec cloud189 up {} /  \;
-
 
   kamd64:
     name: Build x64 kernel and image
     runs-on: [self-hosted, linux, x64] # ubuntu-22.04
-    outputs:
-      image: ${{ steps.data.outputs.image }}
     steps:
-    - name: Set Data
-      id: data
-      shell: bash
-      run: |
-        set -x
-        tag=$(date +'%Y%m%d%H%M')
-        if [[ "$(uname -m)" == "x86_64" ]]; then
-          arch=amd64
-        else
-          arch=arm64
-        fi
-        echo "image=${{ env.REGISTRY_NAME }}/yylt/ecr_$arch:$tag" >> "$GITHUB_OUTPUT"
-    
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: 1.77.2
@@ -124,19 +86,17 @@ jobs:
     - name: Build image and kernel
       run: |
         cd ${{ env.PROJECT }}
+        
         make -f ../kata-image/kata-image.mk agent
         TARGET=ecr make -f ../kata-image/kata-image.mk target
-        #TARGET=nvidia make -f ../kata-image/kata-image.mk target
-        #TARGET=mellanox make -f ../kata-image/kata-image.mk target
+        TARGET=nvidia make -f ../kata-image/kata-image.mk target
+        TARGET=mellanox make -f ../kata-image/kata-image.mk target
         
     - name: Upload 
       run: |
         cd kata-image
+        # image too big to upload ghcr
         ls -lht
-        #find . -maxdepth 1 -type f -name "*.img" -exec cloud189 up {} /  \;
-        #find . -maxdepth 1 -type f -name "*.container" -exec cloud189 up {} /  \;
-
-
 
   notify:
     name: notify 

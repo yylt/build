@@ -19,41 +19,21 @@ on:
 
 env:
   Dockerfile: Dockerfile-tool
-  REGISTRY_NAME: "docker.io"
-  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
-  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
-
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  # REGISTRY_NAME: "docker.io"
+  # REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  # REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
 
 jobs:
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build 
+    runs-on: ubuntu-22.04
     steps:
-    - name: Getting arch
-      id: tag
-      run: |
-        echo "trigger by ${{ github.event_name }}"
-        echo "sha256 is ${{ github.sha }}"
-        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
-        if ${{ github.event_name == 'workflow_dispatch' }} ; then
-            echo "arm=${{ github.event.inputs.arm }}"  >> $GITHUB_ENV
-            echo "amd=${{ github.event.inputs.amd }}"  >> $GITHUB_ENV
-        else
-            echo "arm=on" >> $GITHUB_ENV
-            echo "amd=on" >> $GITHUB_ENV
-        fi
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Check out repo code
-      uses: actions/checkout@v4
-
-    - name: Login to DockerHub
-      uses: docker/login-action@v2
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - uses: docker/login-action@v2
       with:
         registry: ${{ env.REGISTRY_NAME }}
         username: ${{ env.REGISTRY_USER }}
@@ -62,8 +42,7 @@ jobs:
     - name: Docker Buildx (push)
       run: |
         docker buildx build --no-cache \
-          --platform linux/arm64,linux/amd64 \
+          --platform linux/amd64,linux/arm64 \
           --output "type=image,push=true" \
-          --tag ${{ env.REGISTRY_NAME }}/yylt/tool:latest \
-          --tag ${{ env.REGISTRY_NAME }}/yylt/tool:${{ env.date }} \
+          --tag ${{ env.REGISTRY_NAME }}/captain/etcd-tmpfs:v3.5.19 \
           --file ./${{ env.Dockerfile }} ./

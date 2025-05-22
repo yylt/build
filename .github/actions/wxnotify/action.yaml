@@ -1,0 +1,24 @@
+name: "Notify"
+description: "通知企业微信"
+inputs:
+  TEXT:
+    description: '文本信息'
+    required: true
+    default: ''
+  KEY:
+    description: '企微 bot, 如 aec7e335-af25-47b0-ab01-9019247ccf76'
+    required: true
+    default: ''
+runs:
+  using: composite
+  steps:
+  - shell: bash
+    run: |
+      set -ex
+      function send()
+      {
+        content="$1"
+        data="{\"msgtype\":\"text\",\"text\":{\"content\":\"$content\"}}"
+        curl "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${{ inputs.TEXT }}"  -H 'Content-Type: application/json' -d "$data"
+      }
+      send  "${{ inputs.TEXT }}"

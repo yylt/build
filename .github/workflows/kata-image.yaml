@@ -12,19 +12,22 @@ env:
   GO111MODULE: on 
   PROJECT: kata-containers
   BRANCH: stable-2.5
-  RUSTUP_DIST_SERVER: "https://mirrors.ustc.edu.cn/rust-static"
-  RUSTUP_UPDATE_ROOT: "https://mirrors.ustc.edu.cn/rust-static/rustup"
-  REGISTRY_NAME: ghcr.yylt.gq
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+
+  MLNX_X64_URL: ${{ secrets.MLNX_X64_URL }}  
+  NVIDIA_X64_URL: ${{ secrets.NVIDIA_X64_URL }} 
 
 jobs:
   build:
     name: Build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: 
-        - self-hosted
-        - ubuntu-20.04
+    runs-on: [self-hosted, linux, x64] #${{ matrix.os }}
+    # strategy:
+    #   matrix:
+    #     os: 
+    #     - self-hosted
+    #     - ubuntu-20.04
     outputs:
       date: ${{ steps.data.outputs.date }}
       x64image: ${{ steps.data.outputs.amd64 }}
@@ -37,6 +40,7 @@ jobs:
         set -x
         time=$(date +'%Y%m%d%H%M')
         echo "date=$time" >> "$GITHUB_OUTPUT"
+        #echo "date=v6.3.1" >> "$GITHUB_OUTPUT"
         ARCH=$(uname -m)
         if [[ "$ARCH" == "x86_64" ]]; then
           echo "amd64=amd64-ecr-deploy:$time" >> "$GITHUB_OUTPUT"
@@ -69,13 +73,29 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: ${{ env.REGISTRY_NAME }}
-        username: ${{ secrets.DOCKER_HUB_USER }}
-        password: ${{ secrets.GHCR_PASSWORD }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
 
     - name: Build image
       run: |
         cd ${{ env.PROJECT }}
-        make -f ../kata-image/kata-image.mk all
+
+        ARCH=$(uname -m)
+        
+        make -f ../kata-image/kata-image.mk generate-config 
+        make -f ../kata-image/kata-image.mk containerd-shim-v2 ecr-runtime 
+        make -f ../kata-image/kata-image.mk build-kernel
+        #make -f ../kata-image/kata-image.mk build-image
+        if [[ "$ARCH" == "x86_64" ]]; then
+          make -f ../kata-image/kata-image.mk agent
+          TARGET=mellanox make -f ../kata-image/kata-image.mk target
+          mv ../kata-image/mellanox-containers.img ecr_deploy/ecr-containers.img
+
+          TARGET=nvidia make -f ../kata-image/kata-image.mk target
+          mv ../kata-image/nvidia-containers.img ecr_deploy/ecr-containers-nvidiaGpu.img
+
+        fi
+        make -f ../kata-image/kata-image.mk docker-push
       env:
         REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
         IMAGE_TAG: ${{ steps.data.outputs.date }}

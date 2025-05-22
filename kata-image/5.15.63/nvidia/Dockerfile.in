@@ -21,6 +21,4 @@ RUN apt-get update && \
     git \
     make \
     dpkg \
-    multistrap \
-    musl-tools \
-    protobuf-compiler
+    multistrap

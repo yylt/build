@@ -1,0 +1,7 @@
+[client]
+remote_addr = "{{ remote }}" 
+default_token = "{{ token }}" 
+
+[client.services.action]
+type = "tcp" 
+local_addr = "127.0.0.1:3000"

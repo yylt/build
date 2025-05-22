@@ -1,0 +1,106 @@
+name: ingress
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ ingress ]
+  workflow_dispatch:
+    inputs:
+      script_version:
+        description: 'script version, only support 1.9 or 0.49'
+        required: true
+        default: '1.9'
+      branch:
+        description: 'branch or tag name, should compatibe with SCRIPT_VERSION'
+        required: true
+        default: 'release-1.9'
+env:
+  PROJECT: ingress-nginx
+  BRANCH:  gmssl # release-1.9 or nginx-0.49.3-es, SCRIPT_VERSION must comtible
+  SCRIPT_VERSION: 0.49  #1.9 or 0.49 
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+
+jobs:
+  build:
+    name: Build x86
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Setting
+      run: |
+        set -x
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "BRANCH=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV 
+        fi
+
+        echo "trigger by ${{ github.event_name }}"
+        echo "BRANCH is ${{ env.BRANCH }}"
+        echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: easystack/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }} 
+        path: ${{ env.PROJECT }}
+
+
+    - name: Image Build And Push
+      uses: ./.github/actions/ingress
+      with:
+        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
+        PROJECT: ${{ env.PROJECT }}
+        SCRIPT_VERSION: ${{ env.SCRIPT_VERSION }}
+
+  build-arm64:
+    name: Build arm64
+    runs-on: [self-hosted, linux, arm64]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Setting
+      run: |
+        set -x
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "BRANCH=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            echo "SCRIPT_VERSION=${{ github.event.inputs.script_version }}"  >> $GITHUB_ENV 
+        fi
+
+        echo "trigger by ${{ github.event_name }}"
+        echo "BRANCH is ${{ env.BRANCH }}"
+        echo "SCRIPT_VERSION is ${{ env.SCRIPT_VERSION }}"
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: easystack/${{ env.PROJECT }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }} 
+        path: ${{ env.PROJECT }}
+
+    - name: Image Build And Push
+      uses: ./.github/actions/ingress
+      with:
+        REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
+        PROJECT: ${{ env.PROJECT }}
+        SCRIPT_VERSION: ${{ env.SCRIPT_VERSION }}

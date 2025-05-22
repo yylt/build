@@ -1,0 +1,109 @@
+name: helm
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ helm ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'helm branch'
+        required: true
+        default: 'v3.12.3'
+      arm:
+        description: 'build&push arm64 image'
+        required: false
+        default: 'on'
+      amd:
+        description: 'build&push amd64 image'
+        required: false
+        default: 'on'
+
+env:
+  REPO: easystack/helm
+  PROJECT: helm
+  BRANCH: v3.12.3-es
+  Dockerfile: Dockerfile-helm
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-20.04 # 兼容 centos 8
+    steps:
+    
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            echo "arm=${{ github.event.inputs.arm }}"  >> $GITHUB_ENV
+            echo "amd=${{ github.event.inputs.amd }}"  >> $GITHUB_ENV
+        else
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+            echo "arm=on" >> $GITHUB_ENV
+            echo "amd=on" >> $GITHUB_ENV
+        fi
+
+    - name: Check out repo code
+      uses: actions/checkout@v4
+
+    - name: Check out helm code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.REPO }}
+        ref: ${{ env.vbranch }}
+        token: ${{ secrets.KPULL }}  
+        path: ${{ env.PROJECT }}
+
+    - name: Check out kubernetes code
+      uses: actions/checkout@v4
+      with:
+        repository: easystack/kubernetes
+        ref: v1.28.2-helm
+        path: kubernetes
+        token: ${{ secrets.KPULL }}  
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Docker Build/Push Image
+      run: |
+        name=escloud-linux-source-helm-charts
+        if [[ ${{ env.vbranch }} == v3.12.0-es ]]; then
+          exit 1
+        fi
+
+        docker buildx build \
+          --platform linux/amd64 \
+          --output "type=image,push=true" \
+          --build-arg "BASE_IMAGE=${{ env.REGISTRY_NAME }}/captain/$name:v3.12.0-es-bak" \
+          --tag ${{ env.REGISTRY_NAME }}/captain/$name:${{ env.vbranch }} \
+          --file ./${{ env.Dockerfile }} ./
+
+        docker buildx build \
+          --platform linux/arm64 \
+          --output "type=image,push=true" \
+          --build-arg "BASE_IMAGE=${{ env.REGISTRY_NAME }}/arm64v8/$name:v3.12.0-es-bak" \
+          --tag ${{ env.REGISTRY_NAME }}/arm64v8/$name:${{ env.vbranch }} \
+          --file ./${{ env.Dockerfile }} ./

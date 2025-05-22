@@ -26,9 +26,9 @@ IMAGE_TAG ?= v$(shell cat ./VERSION)-$(LAST_COMMIT_ID)
 TARGET ?= "" # kunlun, nvidia, mellanox or ecr
 
 ifeq ($(shell arch),aarch64)
-	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/arm64-ecr-deploy
+	IMAGE_NAME ?= $(REGISTRY_NAME)/arm64v8/ecr-deploy
 else
-	IMAGE_NAME ?= $(REGISTRY_NAME)/yylt/amd64-ecr-deploy
+	IMAGE_NAME ?= $(REGISTRY_NAME)/captain/ecr-deploy
 endif
 
 
@@ -134,7 +134,7 @@ build-image: agent
 	export SECCOMP=no; \
 	export LIBC=gnu; \
 	export DEBUG=true; \
-	export EXTRA_PKGS="coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
+	export EXTRA_PKGS="gcc make curl gnupg coreutils apt tar kmod pkg-config libc-dev libc6-dev pciutils coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/src/agent/target/$$arch-unknown-linux-gnu/release/kata-agent"; \
 	sudo -E ./rootfs-builder/rootfs.sh  ubuntu; \

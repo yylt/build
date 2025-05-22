@@ -18,6 +18,8 @@ nvidia_build() {
 	# 准备文件,注意 nvidia文件,deb文件 需提前放到本目录
 	cp $script_dir/NVIDIA*.run "$rootfstmp"
 	cp $script_dir/linux*.deb "$rootfstmp"
+	# 准备 MLNX 文件
+	#tar xvf $script_dir/MLNX*-x86_64.tgz -C "$rootfstmp"
 
 	# 准备 proc 目录，检测 /proc/cpuinfo 
 	mount -t proc -o ro none $rootfs_dir/proc
@@ -54,6 +56,7 @@ EOF
 	multistrap -a "$DEB_ARCH" -d "$rootfs_dir" -f "$multistrap_conf"
 	
 	nvidia_build "$rootfs_dir"
+
 	rm -rf "$rootfs_dir/var/run"
 	ln -s /run "$rootfs_dir/var/run"
 	cp --remove-destination /etc/resolv.conf "$rootfs_dir/etc"

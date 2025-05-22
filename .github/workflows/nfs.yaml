@@ -55,7 +55,9 @@ jobs:
     - name: Docker Buildx image (push)
       run: |
         cd ${{ env.PROJECT }}
-        sed -i "s/--no-nfs-version 2 --no-nfs-version 3/\$([ \$(uname -m) == \"x86_64\" ] \&\& echo -n \"--no-nfs-version 2 --no-nfs-version 3\" || echo -n \"\")/g" nfsd.sh
+        #sed -i "s/--no-nfs-version 2 --no-nfs-version 3/\$([ \$(uname -m) == \"x86_64\" ] \&\& echo -n \"--no-nfs-version 2 --no-nfs-version 3\" || echo -n \"\")/g" nfsd.sh
+        sed -i 's/--no-nfs-version 2//g' nfsd.sh
+        sed -i 's/--no-nfs-version 3//g' nfsd.sh
         docker buildx build \
           --cache-from "type=local,src=/tmp/.buildx-cache" \
           --platform linux/arm64,linux/amd64 \
