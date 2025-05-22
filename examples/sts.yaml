@@ -1,18 +1,19 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: test
+  name: registry
+  labels:
+    app: registry
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: test
+      app: registry
   template:
     metadata:
       labels:
-        app: test
+        app: registry
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: node-1
       tolerations:
         - effect: NoExecute
           key: node.kubernetes.io/not-ready
@@ -23,17 +24,52 @@ spec:
           operator: Exists
           tolerationSeconds: 2 
       containers:
-      - image: nginx:latest
-        imagePullPolicy: IfNotPresent
-        name: test
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: storage
+          mountPath: /var/lib/registry
+  volumeClaimTemplates:
+  - metadata:
+      name: storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 50Gi
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: test
+  name: registry
+  labels:
+    app: registry
 spec:
   ports:
-    - port: 80
+  - port: 5000
+    name: http
+  clusterIP: None
   selector:
-    app: test
+    app: registry
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: registry
+spec:
+  rules:
+  - host: hub.lo
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: registry
+            port:
+              number: 5000
+
 ---
