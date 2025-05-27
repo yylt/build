@@ -1,0 +1,76 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: secure-container-ecr-deploy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: ecr-deploy
+    name: secure-container-ecr-deploy
+spec:
+  selector:
+    matchLabels:
+      name: secure-container-ecr-deploy
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ecr-deploy
+        name: secure-container-ecr-deploy
+    spec:
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      serviceAccountName: ecr-deploy-sa
+      containers:
+        - name: ecr-deploy
+          image: {{ tuple .Values.images.tags "ecr_deploy" . | include "helm-toolkit.utils.update_image" }}
+          command: ["/entrypoint.sh"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
+              cpu: "500m"
+              memory: "500Mi"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: bin
+              mountPath: /host/usr/bin
+            - name: config
+              mountPath: /host/etc
+            - name: share
+              mountPath: /host/usr/share
+            - name: ssh-key
+              mountPath: /root/.ssh
+              readOnly: true
+            - name: host-cli-tools
+              mountPath: /usr/local/bin/
+            - name: hosts
+              mountPath: /etc/hosts
+      nodeSelector:
+        secure-container: enabled
+      hostNetwork: true
+      volumes:
+        - name: bin
+          hostPath:
+            path: /usr/bin
+        - name: config
+          hostPath:
+            path: /etc
+        - name: share
+          hostPath:
+            path: /usr/share
+        - name: ssh-key
+          hostPath:
+            path: /root/.ssh
+            type: ""
+        - name: host-cli-tools
+          hostPath:
+            path: /usr/local/bin/
+            type: ""
+        - name: hosts
+          hostPath:
+            path: /etc/hosts

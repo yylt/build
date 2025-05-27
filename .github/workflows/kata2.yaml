@@ -4,7 +4,19 @@ on:
   push:
     branches: [ kata2 ]
   workflow_dispatch:
-    
+    inputs:
+      IMG_PUSH:
+        description: 'push container image '
+        required: false
+        default: 'off'
+      MLNX_BUILD:
+        description: 'build mellanox rootfs image'
+        required: false
+        default: 'off'
+      TAG:
+        description: 'container image tag'
+        required: false
+        default: 'dev'
 permissions: # added using https://github.com/step-security/secure-workflows
   contents: write
 
@@ -12,12 +24,15 @@ env:
   GO111MODULE: on 
   PROJECT: kata-containers
   BRANCH: stable-2.5
-  ARM64: "on"
-  AMD64: "on"
-  # MLNX_X64_URL: https://content.mellanox.com/ofed/MLNX_OFED-5.8-4.1.5.0/MLNX_OFED_LINUX-5.8-4.1.5.0-ubuntu22.04-x86_64.tgz
-  # NVIDIA_X64_URL: https://us.download.nvidia.com/tesla/515.48.07/NVIDIA-Linux-x86_64-515.48.07.run  
-  MLNX_X64_URL: ${{ secrets.MLNX_X64_URL }}  
-  NVIDIA_X64_URL: ${{ secrets.NVIDIA_X64_URL }} 
+
+  IMG_PUSH: on
+  MLNX_BUILD: off
+ 
+  REGISTRY_NAME: "${{ secrets.ES_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+
+  STORE_URL: ${{ secrets.STORE_BASE_URL }}
 
   #RUSTUP_UPDATE_ROOT: https://mirrors.aliyun.com/rustup/rustup  # not include old stable
   #RUSTUP_DIST_SERVER: https://mirrors.aliyun.com/rustup
@@ -29,6 +44,18 @@ jobs:
     name: Build arm64 kernel and image
     runs-on: [self-hosted, linux, arm64]
     steps:
+    - name: Getting image tag
+      run: |
+        echo "RPMS_URL=${{ env.STORE_URL }}/rpms.tar.gz" >> $GITHUB_ENV
+        echo "QEMU_STATIC_URL=${{ env.STORE_URL }}/qemu-static.tar.gz" >> $GITHUB_ENV
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "TAG=${{ github.event.inputs.tag }}"  >> $GITHUB_ENV
+        else
+            echo "TAG=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
+        fi
+
+
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         toolchain: 1.77
@@ -37,6 +64,14 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: 1.24
+
+    - name: Login to Registry
+      if: env.IMG_PUSH == 'on'
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
 
     - name: Check out repo code
       uses: actions/checkout@v4
@@ -49,26 +84,63 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Build image and kernel
+    - name: Build rootfs(s) + kernel + binaries
       run: |
         cd ${{ env.PROJECT }}
         make -f ../kata-image/kata-image.mk agent
         TARGET=ecr make -f ../kata-image/kata-image.mk target
         TARGET=kunlun make -f ../kata-image/kata-image.mk target
+        make -f ../kata-image/kata-image.mk containerd-shim-v2 ecr-runtime generate-config
 
-    - name: Upload 
+    - name: Container Image build and push
       shell: bash
       run: |
         cd kata-image
-        ls -lht
+
+        mv aarch64-vmlinuz.container ecr_deploy/vmlinuz.container
+        mv *.img ecr_deploy/  # kunlun-containers.img, ecr-containers.img
+        cp ../kata-containers/ecr_deploy/containerd-shim-ecr-v2 ecr_deploy/
+        cp ../kata-containers/ecr_deploy/ecr-runtime ecr_deploy/
+        cp ../kata-containers/ecr_deploy/configuration.toml ecr_deploy/
+
+        cd ecr_deploy
+        wget -q -O - "${{ env.RPMS_URL }}" | tar -xzf - -C .
+        wget -q -O - "${{ env.QEMU_STATIC_URL }}" | tar -xzf - -C .
+
+        ls -lht .
+        docker build -t ${{ env.REGISTRY_NAME }}/arm64v8/ecr-deploy:${{ env.TAG }} .
+        if [ "${{ env.IMG_PUSH }}" = "on" ]; then
+          docker push ${{ env.REGISTRY_NAME }}/arm64v8/ecr-deploy:${{ env.TAG }}
+        fi
 
   kamd64:
     name: Build x64 kernel and image
     runs-on: [self-hosted, linux, x64] # ubuntu-22.04
     steps:
+    - name: Getting image tag
+      run: |
+        echo "MLNX_X64_URL=${{ env.STORE_URL }}/MLNX_OFED_LINUX-5.8-4.1.5.0-ubuntu22.04-x86_64.tgz" >> $GITHUB_ENV
+        echo "NVIDIA_X64_URL=${{ env.STORE_URL }}/NVIDIA-Linux-x86_64-550.54.14.run" >> $GITHUB_ENV
+        echo "RPMS_URL=${{ env.STORE_URL }}/rpms.tar.gz" >> $GITHUB_ENV
+        echo "QEMU_STATIC_URL=${{ env.STORE_URL }}/qemu-static.tar.gz" >> $GITHUB_ENV
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "TAG=${{ github.event.inputs.tag }}"  >> $GITHUB_ENV
+        else
+            echo "TAG=$(date +'%Y%m%d%H%M')" >> "$GITHUB_ENV"
+        fi
+      
     - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         toolchain: 1.77
+
+    - name: Login to Registry
+      if: env.IMG_PUSH == 'on'
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
 
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -89,14 +161,37 @@ jobs:
     - name: Build image and kernel
       run: |
         cd ${{ env.PROJECT }}
-        
+
         make -f ../kata-image/kata-image.mk agent
+        if [ "${{ env.MLNX_BUILD }}" = "on" ]; then
+          TARGET=mellanox make -f ../kata-image/kata-image.mk target
+        fi
+
         TARGET=ecr make -f ../kata-image/kata-image.mk target
         TARGET=nvidia make -f ../kata-image/kata-image.mk target
-        TARGET=mellanox make -f ../kata-image/kata-image.mk target
-        
-    - name: Upload 
+
+        make -f ../kata-image/kata-image.mk containerd-shim-v2 ecr-runtime generate-config
+
+    - name: Container Image build and push
+      shell: bash
       run: |
         cd kata-image
-        # image too big to upload ghcr
-        ls -lht
+
+        mv x86_64-vmlinuz.container ecr_deploy/vmlinuz.container
+        mv ecr-containers.img ecr_deploy/
+        mv nvidia-containers.img ecr_deploy/ecr-containers-nvidiaGpu.img
+        # mv mellanox-containers.img ecr_deploy/  # useless
+
+        cp ../kata-containers/ecr_deploy/containerd-shim-ecr-v2 ecr_deploy/
+        cp ../kata-containers/ecr_deploy/ecr-runtime ecr_deploy/
+        cp ../kata-containers/ecr_deploy/configuration.toml ecr_deploy/
+
+        cd ecr_deploy
+        wget -q -O - "${{ env.RPMS_URL }}" | tar -xzf - -C .
+        wget -q -O - "${{ env.QEMU_STATIC_URL }}" | tar -xzf - -C .
+        
+        ls -lht .
+        docker build -t ${{ env.REGISTRY_NAME }}/captain/ecr-deploy:${{ env.TAG }} .
+        if [ "${{ env.IMG_PUSH }}" = "on" ]; then
+          docker push ${{ env.REGISTRY_NAME }}/captain/ecr-deploy:${{ env.TAG }}
+        fi
