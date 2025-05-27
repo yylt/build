@@ -1,0 +1,6 @@
+# generated files
+ecr-runtime
+containerd-shim-ecr-v2
+configuration.toml
+ecr-containers.img
+vmlinuz.container
