@@ -113,7 +113,9 @@ package:
 		libseccomp-dev \
 		curl wget sudo \
 		bc
-
+	sudo -E mkdir -p ~/.cargo/
+	sudo -E cp ../kata-image/cargo-config.toml ~/.cargo/config
+	
 build-kernel: package
 ifeq ($(shell arch),aarch64)
 	cp -a tools/packaging/kernel/patches/5.15.x/arm-experimental/* tools/packaging/kernel/patches/5.15.x/; \

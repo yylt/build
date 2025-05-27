@@ -19,20 +19,24 @@ env:
   MLNX_X64_URL: ${{ secrets.MLNX_X64_URL }}  
   NVIDIA_X64_URL: ${{ secrets.NVIDIA_X64_URL }} 
 
+  #RUSTUP_UPDATE_ROOT: https://mirrors.aliyun.com/rustup/rustup  # not include old stable
+  #RUSTUP_DIST_SERVER: https://mirrors.aliyun.com/rustup
+
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1  # except unknown platform buildx
+
 jobs:
   karm64:
     name: Build arm64 kernel and image
     runs-on: [self-hosted, linux, arm64]
     steps:
-    - uses: actions-rs/toolchain@v1
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        toolchain: 1.77.2
-        override: true
+        toolchain: 1.77
 
-    - name: Set up Go 1.22
+    - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.22
+        go-version: 1.24
 
     - name: Check out repo code
       uses: actions/checkout@v4
@@ -62,15 +66,14 @@ jobs:
     name: Build x64 kernel and image
     runs-on: [self-hosted, linux, x64] # ubuntu-22.04
     steps:
-    - uses: actions-rs/toolchain@v1
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        toolchain: 1.77.2
-        override: true
+        toolchain: 1.77
 
-    - name: Set up Go 1.22
+    - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.22
+        go-version: 1.24
 
     - name: Check out repo code
       uses: actions/checkout@v4
@@ -97,29 +100,3 @@ jobs:
         cd kata-image
         # image too big to upload ghcr
         ls -lht
-
-  notify:
-    name: notify 
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    needs: [ karm64, kamd64 ]
-
-    steps:
-    - name: WeChat Work notification
-      shell: bash
-      env:
-        AMD64: ${{ needs.kamd64.outputs.image }}
-        ARM64: ${{ needs.karm64.outputs.image }}
-        WEBHOOK: ${{ secrets.WEWORK_ECRGROUP_BUILD }}
-      run: |
-        text="ecr_kernel_image 编译完成."
-        if [[ "$AMD64" != "" ]];then
-          echo "image: $AMD64"
-        fi
-        if [[ "$ARM64" != "" ]];then
-          #text="$text\nimage: $ARM64"
-          echo "image: $ARM64"
-        fi
-        echo "text: $text"
-        data="{\"msgtype\":\"text\",\"text\":{\"content\":\"$text\"}}"
-        #curl ${WEBHOOK} -H 'Content-Type: application/json' -d "$data"
