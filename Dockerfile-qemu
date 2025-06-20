@@ -1,0 +1,23 @@
+FROM rust:1.86-bullseye as builder
+
+ARG TARGETPLATFORM
+
+WORKDIR /app
+
+COPY . .
+
+RUN mkdir -p ~/.cargo && cp /app/cargo-config.toml ~/.cargo/config.toml && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends libcap-ng-dev libseccomp-dev && \
+    cargo build --release 
+
+FROM debian:bullseye
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libcap-ng-dev libseccomp-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+
+COPY --from=builder /app/target/release/virtiofsd /
+COPY ./kata-static-qemu-experimental.tar.gz /
