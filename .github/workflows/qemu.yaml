@@ -1,0 +1,112 @@
+name: qemu
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ qemu ]
+  workflow_dispatch:
+
+env:
+  REPO: easystack/kata-containers
+  PROJECT: kata-containers
+  BRANCH: stable-2.5
+  Dockerfile: Dockerfile-qemu
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+  USER: root
+  QEMU_VERSION: 7a800cf9496fddddf71b21a00991e0ec757a170a
+  QEMU_REPO: https://ghfast.top/https://github.com/qemu/qemu
+  VIRTIOFSD_VERSION: v1.3.0
+
+jobs:
+  arm64build:
+    name: Build arm64
+    runs-on: [self-hosted, linux, arm64]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.REPO }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }}  
+        path: ${{ env.PROJECT }}
+
+    - name: Build qemu 
+      run: |
+        static_qemu_path=${{ env.PROJECT }}/tools/packaging/static-build/qemu
+        pushd "$static_qemu_path"
+        qemu_repo=${{ env.QEMU_REPO }} qemu_version=${{ env.QEMU_VERSION }} make build-experimental
+        popd
+        cp "$static_qemu_path/kata-static-qemu-experimental.tar.gz" ./
+
+    - name: Docker Image Build And Push
+      run: |
+        git clone https://gitlab.com/virtio-fs/virtiofsd.git
+        pushd virtiofsd
+        git checkout ${{ env.VIRTIOFSD_VERSION }}
+        mv ../kata-static-qemu-experimental.tar.gz ./
+        cp ../kata-image/cargo-config.toml ./
+
+        docker build --no-cache \
+          --platform linux/arm64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/arm64v8/kata-qemu:${{ env.date }} \
+          --file ../${{ env.Dockerfile }} .
+  x86build:
+    name: Build x64
+    runs-on: [self-hosted, linux, x64]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.REPO }}
+        ref: ${{ env.BRANCH }}
+        token: ${{ secrets.KPULL }}  
+        path: ${{ env.PROJECT }}
+
+    - name: Build qemu 
+      run: |
+        static_qemu_path=${{ env.PROJECT }}/tools/packaging/static-build/qemu
+        pushd "$static_qemu_path"
+        qemu_repo=${{ env.QEMU_REPO }} qemu_version=${{ env.QEMU_VERSION }} make build-experimental
+        popd
+        cp "$static_qemu_path/kata-static-qemu-experimental.tar.gz" ./
+
+    - name: Docker Image Build And Push
+      run: |
+        git clone https://gitlab.com/virtio-fs/virtiofsd.git
+        pushd virtiofsd
+        git checkout ${{ env.VIRTIOFSD_VERSION }}
+        mv ../kata-static-qemu-experimental.tar.gz ./
+        cp ../kata-image/cargo-config.toml ./
+
+        docker build --no-cache \
+          --platform linux/amd64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/captain/kata-qemu:${{ env.date }} \
+          --file ../${{ env.Dockerfile }} .
+
