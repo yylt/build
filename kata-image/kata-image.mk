@@ -50,19 +50,19 @@ ecr-runtime:
 
 # 根据架构不同生成安全容器配置文件
 generate-config:
+	make -C $(SOURCE_DIR) clean
 ifeq ($(shell arch),x86_64)
-	# make -C $(SOURCE_DIR) clean
 	make -C $(SOURCE_DIR) config/configuration-qemu.toml \
 	SKIP_GO_VERSION_CHECK=y \
-	QEMUPATH="/usr/libexec/qemu-kvm" \
 	KERNELPATH="/usr/share/ecr/vmlinuz.container" \
 	IMAGEPATH="/usr/share/ecr/ecr-containers.img" \
-	QEMUVALIDHYPERVISORPATHS='[\"/usr/libexec/qemu-kvm\"]' \
+	QEMUPATH="/opt/kata/bin/qemu-system-x86_64-experimental" \
+	QEMUVALIDHYPERVISORPATHS='[\"/opt/kata/bin/qemu-system-x86_64-experimental\"]' \
 	CPUFEATURES="pmu=off,vmx=off" \
 	DEFMEMSZ="2048" \
 	MACHINETYPE="q35" \
-	DEFVIRTIOFSDAEMON="/usr/libexec/virtiofsd" \
-	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/usr/libexec/virtiofsd\"]' \
+	DEFVIRTIOFSDAEMON="/opt/kata/bin/virtiofsd" \
+	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/opt/kata/bin/virtiofsd\"]' \
 	DEFSANDBOXCGROUPONLY="true" \
 	DEFAULTPFLASHES='[]' \
 	IOMMU='true' \
@@ -72,18 +72,17 @@ ifeq ($(shell arch),x86_64)
 endif
 
 ifeq ($(shell arch),aarch64)
-	# make -C $(SOURCE_DIR) clean
 	make -C $(SOURCE_DIR) config/configuration-qemu.toml \
 	SKIP_GO_VERSION_CHECK=y \
-	QEMUPATH="/opt/ecr/bin/qemu-system-aarch64" \
 	KERNELPATH="/usr/share/ecr/vmlinuz.container" \
 	IMAGEPATH="/usr/share/ecr/ecr-containers.img" \
-	QEMUVALIDHYPERVISORPATHS='[\"/usr/libexec/qemu-kvm\", \"/opt/ecr/bin/qemu-system-aarch64\"]' \
+	QEMUPATH="/opt/kata/bin/qemu-system-aarch64-experimental" \
+	QEMUVALIDHYPERVISORPATHS='[\"/opt/kata/bin/qemu-system-aarch64-experimental\"]' \
 	CPUFEATURES="pmu=off" \
 	DEFMEMSZ="2048" \
 	MACHINETYPE="virt" \
-	DEFVIRTIOFSDAEMON="/usr/libexec/virtiofsd" \
-	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/usr/libexec/virtiofsd\"]' \
+	DEFVIRTIOFSDAEMON="/opt/kata/bin/virtiofsd" \
+	DEFVALIDVIRTIOFSDAEMONPATHS='[\"/opt/kata/bin/virtiofsd\"]' \
 	DEFSANDBOXCGROUPONLY="true" \
 	DEFAULTPFLASHES='[\"/usr/share/ecr/ecr-flash0.img\", \"/usr/share/ecr/ecr-flash1.img\"]' \
 	DEFAULTDISABLEIMAGENVDIMM="true" \
