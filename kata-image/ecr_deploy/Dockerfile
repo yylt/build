@@ -1,27 +1,29 @@
-FROM docker.io/library/ubuntu:20.04
+ARG BASE_IMAGE=""
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends openssh-client && \
-    rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /ecr && \
-    mkdir -p /ecr/rpms
+FROM ${BASE_IMAGE} as static
 
-# rpms not required for 621+
-ADD rpms/qemu /ecr/rpms
-# prepare ecr-flash for uefi boot
-ADD uefi/aarch64/ecr-flash.tar.gz /ecr
+FROM docker.io/library/alpine:edge
 
-# COPY 6.1.0 qemu static wich cpuhotplug
-COPY qemu-static/ecr-static-qemu.tar.gz /ecr
+RUN  apk -U --no-cache add bash && mkdir /ecr
 
+# prepare ecr-flash for uefi boot on arm64 platform
+ADD uefi/aarch64/ecr-flash.tar.gz /ecr 
 
-# files which created from build steps
-COPY vmlinuz.container /ecr
-COPY *.img /ecr
-COPY containerd-shim-ecr-v2 /ecr
-COPY ecr-runtime /ecr
-COPY configuration.toml /ecr
+# COPY qemu, kernel and virtiofsd 
+COPY --from=static /virtiofsd /virtiofsd
+COPY --from=static /kata-static-qemu-experimental.tar.gz /kata-static-qemu-experimental.tar.gz
+COPY vmlinuz.container /
 
+# reference: yylt/build/kata-image/build.sh
+# arm64 have images: ecr-containers.img, kunlun-containers.img
+# x86_64 have images: ecr-containers.img, ecr-containers-nvidiaGpu.img
+COPY *.img /  
+
+COPY containerd-shim-ecr-v2 /
+COPY ecr-runtime /
+COPY configuration.toml /
+
+COPY scripts/stop_ecr.service /stop_ecr.service
 COPY scripts/entrypoint.sh /entrypoint.sh
 
-# Entrypoint ["/entrypoint.sh"]
+Entrypoint ["/entrypoint.sh"]

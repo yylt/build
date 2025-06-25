@@ -1,0 +1,14 @@
+[Unit]
+Description=stop ecr shim process
+Before=containerd.service
+After=rbdmap.service
+
+[Service]
+Type=oneshot
+ExecStop=/usr/bin/pkill -15 -ef containerd-shim-ecr-v2
+RemainAfterExit=yes
+ExecReload=/bin/true
+ExecStart=/bin/true
+
+[Install]
+WantedBy=multi-user.target

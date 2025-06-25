@@ -1,255 +1,170 @@
 #!/usr/bin/env bash
-set -e
+#set -e
 
-runtimeName=${RUNTIME_NAME:-"containerd-shim-ecr-v2"}
-systemBinDir=${BIN_DIR:-"/host/usr/bin/"}
-ecrRuntimeName=${ECR_RUNTIME:-"ecr-runtime"}
-configname="configuration.toml"
-configDir=${CONFIG_DIR:-"/host/etc/ecr/"}
-kernelName=${KERNEL_NAME:-"vmlinuz.container"}
-kernelDir=${KERNEL_DIR:-"/host/usr/share/ecr/"}
-imageName=${IMAGE_NAME:-"ecr-containers.img"}
-NvidiaImageName=${IMAGE_NAME:-"ecr-containers-nvidiaGpu.img"}
-imageDir=${IMAGE_DIR:-"/host/usr/share/ecr/"}
-flashTarName=${FLASH_TAR_NAME:-"ecr-flash.tar.gz"}
-flashDir=${FLASH_DIR:-"/host/usr/share/ecr/"}
-sourceDir=${SOURCE_DIR:-"/ecr"}
-localDir=$(pwd)
 
-logPrint() {
-    date=`date +'%Y-%m-%d %H:%M:%S'`
-    echo "$date: $1"
+HOSTROOT=${HOSTDIR:-"/proc/1/root"}
+HOSTDIRS=("/opt/kata/bin" "/etc/ecr" "/usr/share/ecr")
+DIR=$(dirname "$(readlink -f "$0")")
+
+# key: file in image, value: file in host
+declare -A copyfiles
+
+# define copy files
+
+# container shim files
+copyfiles["/containerd-shim-ecr-v2"]="/usr/bin/containerd-shim-ecr-v2"
+copyfiles["/ecr-runtime"]="/usr/bin/ecr-runtime"
+
+# configration file
+copyfiles["/configuration.toml"]="/etc/ecr/configuration.toml"
+
+# kernel
+copyfiles["/vmlinuz.container"]="/usr/share/ecr/vmlinuz.container"
+
+# qemu and virtiofsd, qemu have to extract.
+copyfiles["/virtiofsd"]="/opt/kata/bin/virtiofsd"
+
+# uefi boot on arm64 platform
+copyfiles["/ecr/ecr-flash0.img"]="/usr/share/ecr/ecr-flash0.img"
+copyfiles["/ecr/ecr-flash1.img"]="/usr/share/ecr/ecr-flash1.img"
+
+# stop ecr service, for ecr-shim issue ...
+copyfiles["/stop_ecr.service"]="/etc/systemd/system/stop_ecr.service"
+
+# NOTE, different qemu image on different arch, so have to search-compare-copy
+
+
+log() {
+    local message="$1"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') [INFO] $message"
 }
 
-prepareShim() {
-    if [[ $(hashID ${sourceDir}/${runtimeName}) != $(hashID ${systemBinDir}${runtimeName}) ]]
-    then
-        # force copy for solving problem "Text file busy"
-        cp -f ${sourceDir}/${runtimeName} ${systemBinDir}
-        if [ $? -eq 0 ];then
-            logPrint "Prepare runtime shim: success"
-        else
-            logPrint "Prepare runtime shim: failed"
-            exit 1
-        fi
-    else
-        logPrint "Same runtime shim: No need to upgrade"
+logfatal() {
+    local message="$1"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') [FATAL] $message" >&2 # 输出到标准错误
+    exit 1 
+}
+
+hashFile() {
+    local file="$1"
+    sha256sum "$file" | awk '{print $1}'
+    if [ $? -ne 0 ]; then
+        logfatal "Error: Failed to calculate SHA256 hash for file '$file'."
     fi
 }
 
-prepareEcrRuntime() {
-    if [[ $(hashID ${sourceDir}/${ecrRuntimeName}) != $(hashID ${systemBinDir}${ecrRuntimeName}) ]]
-    then
-        # force copy for solving problem "Text file busy"
-        cp -f ${sourceDir}/${ecrRuntimeName} ${systemBinDir}
-        if [ $? -eq 0 ];then
-            logPrint "Prepare runtime: success"
+compareCopy() {
+    file1="$1"
+    file2="$2"
+
+    # 检查文件1是否存在且是普通文件
+    if [ ! -f "$file1" ]; then
+        logfatal "Error: File '$file1' not found or is not a regular file."
+    fi
+
+    sha256_file1=$(hashFile "$file1")
+    log "SHA256 of '$file1': $sha256_file1"
+
+    if [ -f "$file2" ]; then
+
+        sha256_file2=$(hashFile "$file2")
+        log "SHA256 of '$file2': $sha256_file2"
+
+        if [ "$sha256_file1" != "$sha256_file2" ]; then
+            log "Hashes differ. Deleting '$file2' and copying '$file1' to '$file2'..."
+            rm -f "$file2"
+            if [ $? -ne 0 ]; then
+                logfatal "Error: Failed to delete '$file2'."
+            fi
+            cp "$file1" "$file2"
+            if [ $? -ne 0 ]; then
+                logfatal "Error: Failed to copy '$file1' to '$file2'."
+            fi
         else
-            logPrint "Prepare runtime: failed"
-            exit 1
+            log "Same '$file1' with '$file2': No need to copy."
         fi
     else
-        logPrint "Same runtime: No need to upgrade"
+        log "File '$file2' does not exist. Copying '$file1' to '$file2'..."
+        cp "$file1" "$file2"
+        if [ $? -ne 0 ]; then
+            logfatal "Error: Failed to copy '$file1' to '$file2'."
+        fi
     fi
 }
 
-prepareConfig() {
-    mkdir -p ${configDir}
-    if [[ $(hashID ${sourceDir}/${configname}) != $(hashID ${configDir}${configname}) ]]
-    then
-        cp -f ${sourceDir}/${configname} ${configDir}
-        if [ $? -eq 0 ];then
-            logPrint "Prepareruntime configuration: success"
-        else
-            logPrint "Prepare runtime configuration: failed"
-            exit 1
-        fi
-    else
-        logPrint "Same runtime configuration: No need to upgrade"
-    fi
+copyFiles() {
+    for key in "${!copyfiles[@]}"; do
+        compareCopy "$key" "$HOSTROOT${copyfiles[$key]}"
+    done    
 }
 
-prepareKernel() {
-    mkdir -p ${kernelDir}
-    if [[ $(hashID ${sourceDir}/${kernelName}) != $(hashID ${kernelDir}${kernelName}) ]]
-    then
-        cp -f ${sourceDir}/${kernelName} ${kernelDir}
-        if [ $? -eq 0 ];then
-            logPrint "Prepare kernel: success"
-        else
-            logPrint "Prepare kernel: failed"
-            exit 1
-        fi
-    else
-        logPrint "Same kernel: No need to upgrade"
-    fi
-}
+# rootfs image should be in the same directory as the script
+prepareQemuImages() {
+    imageHostDir="$HOSTROOT/usr/share/ecr"
 
-prepareImage() {
-    mkdir -p ${imageDir}
-
-    find "${sourceDir}" -maxdepth 1 -type f -name "*.img" | while read -r source_image_path; do
+    find "${DIR}" -maxdepth 1 -type f -name "*.img" | while read -r source_image_path; do
         # 提取文件名，例如 "my_image.img"
         imageName=$(basename "${source_image_path}")
-
-        logPrint "Processing image: ${imageName}"
-
-        # 计算源文件哈希
-        source_hash=$(hashID "${source_image_path}")
-        # 计算目标文件哈希
-        target_hash=$(hashID "${imageDir}${imageName}")
-
-        if [[ "${source_hash}" != "${target_hash}" ]]; then
-            logPrint "Image hash mismatch for ${imageName}. Updating..."
-
-            # 尝试删除旧文件并拷贝新文件
-            # 使用 -f 确保即使目标文件不存在也不会报错
-            rm -f "${imageDir}${imageName}" && \
-            cp "${source_image_path}" "${imageDir}${imageName}"
-
-            if [ $? -eq 0 ]; then
-                logPrint "Prepare image: success for ${imageName}"
-            else
-                logPrint "Prepare image: failed for ${imageName}"
-                exit 1 # 拷贝失败则退出脚本
-            fi
-        else
-            logPrint "Same image: No need to upgrade for ${imageName}"
-        fi
+        compareCopy "${source_image_path}" "${imageHostDir}/${imageName}"
     done
-
-    logPrint "All .img files processed."
 }
 
-prepareStopEcrService() {
-  node=$(hostname)
+# qemu-kvm-{arch}-experimental
+prepareQemuKvm() {
+    src="/kata-static-qemu-experimental.tar.gz"
+    dst="${HOSTROOT}/opt/kata/kata-static-qemu-experimental.tar.gz"
 
-  ssh -o "StrictHostKeyChecking=no" $node \
-  "cat <<EOF> /etc/systemd/system/stop_ecr.service
-[Unit]
-Description=stop ecr shim process
-Before=containerd.service
-After=rbdmap.service
-
-[Service]
-Type=oneshot
-ExecStop=/usr/bin/pkill -15 -ef containerd-shim-ecr-v2
-RemainAfterExit=yes
-ExecReload=/bin/true
-ExecStart=/bin/true
-
-[Install]
-WantedBy=multi-user.target
-EOF"
-    ssh -o "StrictHostKeyChecking=no" $node \
-    "systemctl daemon-reload && systemctl enable stop_ecr &&systemctl start stop_ecr"
-}
-
-hashID() {
-    if [ -f $1 ];then
-        md5sum $1 | awk '{print $1}'
-    else
-        echo ""
-    fi
-}
-
-loop() {
-    sleep infinity
-}
-
-# 准备升级 qemu 组件
-prepareQemu() {
-    # 拷贝文件
-    nodeName=$(hostname)
-    tmpDir=$(ssh $(hostname) "mktemp -d")
-    arch=$(ssh ${nodeName} "arch")
-    scp -r /ecr/rpms/${arch}/* root@${nodeName}:${tmpDir}/
-
-    # 卸载 qemu
-    logPrint "uninstall old qemu-kvm* rpm"
-    for i in $(ssh ${nodeName} "yum list --installed  | grep -i qemu-kvm" | awk '{print $1}');do ssh ${nodeName} "yum remove -y $i";done
-
-    # 升级 qemu
-    logPrint "upgrade qemu-kvm* rpm"
-    ssh ${nodeName} "tar -C ${tmpDir} -xf ${tmpDir}/qemu-kvm*.tar.gz"
-    ssh ${nodeName} "yum localinstall -y ${tmpDir}/*.rpm"
-    # WARNING: 危险操作，需要判空
-    # ssh ${nodeName} "rm -rf ${tmpDir}"
-    # 使用社区的6.1.0 qemu来支持cpu-hotplug功能
-    if [[ $(arch) == "aarch64" ]]
-    then
-        logPrint "install 6.1.0 qemu with cpu-hotplug patch"
-        scp -r /ecr/ecr-static-qemu.tar.gz root@${nodeName}:${tmpDir}/
-        ssh ${nodeName} "tar zxvf ${tmpDir}/ecr-static-qemu.tar.gz -C /opt/"
-    fi
-}
-
-# 准备 ecr-flash 文件
-prepareFlash() {
-    if [[ $(arch) == "aarch64" ]]
-    then
-        if [[ $(hashID ${sourceDir}/ecr-flash0.img) != $(hashID ${flashDir}ecr-flash0.img) ]]
-        then
-            cp -f ${sourceDir}/ecr-flash0.img ${flashDir}
-            cp -f ${sourceDir}/ecr-flash1.img ${flashDir}
-            if [ $? -eq 0 ];then
-                logPrint "Prepare ecr flash: success"
-            else
-                logPrint "Prepare ecr flash: failed"
-                exit 1
-            fi
-        else
-            logPrint "Same ecr flash: No need to upgrade"
+    if [ -f "$dst" ]; then
+        if [[ $(hashFile ${src}) == $(hashFile ${dst}) ]]; then
+            log "prepareQemuKvm: QemuKvm hash is equal, skipping."
+            return
         fi
-    else
-        logPrint "non-aarch64 platform, no execution"
     fi
 
+    # extract file success then copy.
+    log "prepareQemuKvm: Extracting ${src} to /"
+    tar -xf "${src}" -C "${HOSTROOT}/"
+
+    compareCopy "${src}" "${dst}"
+}
+
+prepareService() {
+    nsenter --mount=/proc/1/ns/mnt -- bash -c "systemctl daemon-reload && systemctl enable stop_ecr && systemctl start stop_ecr"
 }
 
 prepareContainerd() {
-    for node in $(hostname);do
-        if [[ $(ssh $node "cat /etc/containerd/config.toml" | grep -c "privileged_without_host_devices = true") -eq 0 ]];then
-            if [[ $(ssh $node "systemctl status containerd"  | grep -c "active (running)") -eq 1 ]];then
+    if [[ $(cat "${HOSTROOT}/etc/containerd/config.toml" | grep -c "privileged_without_host_devices = true") -eq 0 ]];then
+        if [[ $(nsenter --mount=/proc/1/ns/mnt "systemctl status containerd"  | grep -c "active (running)") -eq 1 ]];then
 
-                logPrint "$node: add containerd.service configuration 'privileged_without_host_devices = true' for ecr runtime"
-                ssh $node "sed -i '/io.containerd.ecr.v2/a\         privileged_without_host_devices = true' /etc/containerd/config.toml"
+            log " add containerd.service configuration 'privileged_without_host_devices = true' for ecr runtime"
+            sed -i '/io.containerd.ecr.v2/a\         privileged_without_host_devices = true' "${HOSTROOT}/etc/containerd/config.toml"
 
-                # 重启节点 containerd.service，使配置生效
-                logPrint "$node: prepareContainerd(): restarting containerd.service"
-                ssh $node "systemctl restart containerd"
-                logPrint "$node: prepareContainerd(): restart containerd.service done."
-            else
-                logPrint "$node: containerd.service isn't running: modifying containerd failed."
-                logPrint "prepareContainerd(): sleep 5s and script exit"
-                sleep 5 # 等待 5s，脚本退出，重试
-                exit 1
-            fi
+            # 重启节点 containerd.service，使配置生效
+            log " prepareContainerd(): restarting containerd.service"
+            nsenter --mount=/proc/1/ns/mnt "systemctl restart containerd"
+            log "prepareContainerd(): restart containerd.service done."
         else
-            logPrint "$node: prepareContainerd(): containerd configuration 'privileged_without_host_devices' for ecr runtime is already modified."
+            logfatal "containerd.service isn't running: modifying containerd failed."
         fi
+    else
+        log "prepareContainerd(): containerd configuration 'privileged_without_host_devices' for ecr runtime is already modified."
+    fi
+}
+
+
+makeHostDir() {
+    for mp in "${HOSTDIRS[@]}"; do
+        log "makeHostDir(): mkdir -p ${HOSTROOT}${mp}"
+        mkdir -p "${HOSTROOT}${mp}"
     done
 }
 
-main() {
-    prepareShim
-    prepareConfig
-    prepareKernel
-    prepareImage
-    prepareEcrRuntime
-    prepareStopEcrService
-    prepareQemu
-    prepareFlash
-    prepareContainerd
+makeHostDir
+copyFiles
+prepareQemuKvm
+prepareQemuImages
+prepareContainerd
+prepareService
 
-    echo "Jobs Done! Will run infinitely"
-    loop
-}
-
-# for script debug
-mkdir -p ${systemBinDir}
-mkdir -p ${configDir}
-mkdir -p ${kernelDir}
-mkdir -p ${imageDir}
-
-main
+log "Jobs Done! Will run infinitely"
+sleep infinity
