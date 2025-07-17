@@ -1,0 +1,69 @@
+name: esmultus
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ esmultus ]
+  workflow_dispatch: 
+    inputs:
+      branch:
+        description: 'kubernetes branch'
+        required: true
+        default: 'v3'
+env:
+  BRANCH: v3.4.1-es
+  Dockerfile: Dockerfile-esmultus
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+        else
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+        fi
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Docker Image(amd64) Build And Push
+      run: |
+        docker buildx build --no-cache \
+          --platform linux/amd64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --build-arg "BASE_IMAGE=${{ env.REGISTRY_NAME }}/captain/multus:v3.4.1" \
+          --build-arg "BW_IMAGE=${{ env.REGISTRY_NAME }}/captain/flannel-cni:v1.1.2-es" \
+          --tag ${{ env.REGISTRY_NAME }}/captain/multus:${{ env.vbranch }} \
+          --file ./${{ env.Dockerfile }} .
+
+    - name: Docker Image(arm64) Build And Push
+      run: |
+        docker buildx build --no-cache \
+          --platform linux/arm64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --build-arg "BASE_IMAGE=${{ env.REGISTRY_NAME }}/arm64v8/multus:v3.4.1" \
+          --build-arg "BW_IMAGE=${{ env.REGISTRY_NAME }}/arm64v8/flannel-cni:v1.1.2-es" \
+          --tag ${{ env.REGISTRY_NAME }}/arm64v8/multus:${{ env.vbranch }} \
+          --file ./${{ env.Dockerfile }} .
+
