@@ -1,9 +1,12 @@
 ARG BASE_IMAGE=
+
 ARG BW_IMAGE=
+
 FROM ${BASE_IMAGE} as BUILD
 
 RUN sed -i 's/  sleep infinity/  sleep 300d/' /entrypoint.sh && \
     chmod +x /entrypoint.sh
+
 
 FROM ${BW_IMAGE} as BW
 
@@ -19,3 +22,4 @@ RUN apt-get update && \
 COPY --from=BUILD /entrypoint.sh /entrypoint.sh
 COPY --from=BUILD /usr/src/multus-cni/bin/multus /usr/src/multus-cni/bin/
 COPY --from=BW /cni-plugins/bandwidth /bandwidth
+
