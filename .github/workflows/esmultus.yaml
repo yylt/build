@@ -52,6 +52,7 @@ jobs:
           --provenance false --sbom false \
           --output "type=image,push=true" \
           --build-arg "BASE_IMAGE=${{ env.REGISTRY_NAME }}/captain/multus:v3.4.1" \
+          --build-arg "BW_IMAGE=${{ env.REGISTRY_NAME }}/captain/flannel-cni:v1.1.2-es" \
           --tag ${{ env.REGISTRY_NAME }}/captain/multus:${{ env.vbranch }} \
           --file ./${{ env.Dockerfile }} .
 
@@ -62,6 +63,7 @@ jobs:
           --provenance false --sbom false \
           --output "type=image,push=true" \
           --build-arg "BASE_IMAGE=${{ env.REGISTRY_NAME }}/arm64v8/multus:v3.4.1" \
+          --build-arg "BW_IMAGE=${{ env.REGISTRY_NAME }}/arm64v8/flannel-cni:v1.1.2-es" \
           --tag ${{ env.REGISTRY_NAME }}/arm64v8/multus:${{ env.vbranch }} \
           --file ./${{ env.Dockerfile }} .
 
