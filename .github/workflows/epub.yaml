@@ -1,0 +1,63 @@
+name: epub
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ epub ]
+  workflow_dispatch: 
+    inputs:
+      branch:
+        description: 'flow branch'
+        required: true
+        default: 'main'
+env:
+  BRANCH: "main"
+  PROJECT: epub
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+        else
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+        fi
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+    - name: Check out build code
+      uses: actions/checkout@v4
+      with:
+        repository: pacexy/flow
+        ref: ${{ env.vbranch }}
+        path: ${{ env.PROJECT }}
+
+    - name: Docker Image Build And Push
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build --no-cache \
+          --platform linux/amd64,linux/arm64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/epub:${{ env.date }} \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/epub:latest \
+          --file ./Dockerfile .
+
