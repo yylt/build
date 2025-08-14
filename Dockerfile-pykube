@@ -1,0 +1,8 @@
+FROM python:3.10.12-alpine
+
+
+WORKDIR /app
+
+RUN apk add --no-cache --virtual .build-deps gcc musl-dev \
+    && pip install --no-cache-dir kubernetes \
+    && apk del .build-deps
