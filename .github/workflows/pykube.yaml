@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  BRANCH: v0.1.0
+  BRANCH: v0.2.0
   Dockerfile: Dockerfile-pykube
   REGISTRY_NAME: "docker.io"
   REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"

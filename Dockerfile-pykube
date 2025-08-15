@@ -1,8 +1,13 @@
+FROM gcr.io/etcd-development/etcd:v3.5.19 as etcd
+
 FROM python:3.10.12-alpine
 
 
 WORKDIR /app
 
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev \
-    && pip install --no-cache-dir kubernetes \
-    && apk del .build-deps
+RUN pip install --no-cache-dir kubernetes etcd3 netifaces2 \
+    && apk add -U --no-cache bash dumb-init curl \
+    && apk add -U --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing cfssl  
+
+COPY --from=etcd /usr/local/bin/etcd /usr/bin/
+COPY --from=etcd /usr/local/bin/etcdctl /usr/bin/
