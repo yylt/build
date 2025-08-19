@@ -267,12 +267,11 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) map[string][]string
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: true,
 	}
-	wg.Add(maxNodes - 1)
+
 	for i := 0; i < maxNodes; i++ {
 		if i == myIndex {
 			continue
 		}
-
 		podName := fmt.Sprintf("%s-%d", prefix, i)
 		domain := fmt.Sprintf("%s.%s.%s.svc.cluster.local",
 			podName, os.Getenv("SERVICE_NAME"), os.Getenv("POD_NAMESPACE"))
@@ -281,6 +280,7 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) map[string][]string
 		if err != nil || len(ips) == 0 {
 			continue
 		}
+		wg.Add(1)
 		go func(iplist []string, podname string) {
 			defer wg.Done()
 			var ready bool
@@ -308,7 +308,7 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) map[string][]string
 	return aliveEndpoints
 }
 
-func getCurrentClient(aliveEndpoints map[string][]string) (*etcdcli.Client, error) {
+func getCurrentClient(aliveEndpoints map[string][]string) (etcdcli.Cluster, error) {
 	if len(aliveEndpoints) == 0 {
 		return nil, fmt.Errorf("no alive endpoints found")
 	}
@@ -325,8 +325,9 @@ func getCurrentClient(aliveEndpoints map[string][]string) (*etcdcli.Client, erro
 	}
 
 	cliconfig := etcdcli.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 2 * time.Second,
+		Endpoints:       endpoints,
+		MaxUnaryRetries: 14,
+		DialTimeout:     2 * time.Second,
 		TLS: &tls.Config{
 			InsecureSkipVerify: true,
 			Certificates:       []tls.Certificate{cert},
@@ -336,10 +337,10 @@ func getCurrentClient(aliveEndpoints map[string][]string) (*etcdcli.Client, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to create etcd client: %v", err)
 	}
-	return client, nil
+	return etcdcli.NewCluster(client), nil
 }
 
-func joinExistingCluster(client *etcdcli.Client, myIPs []string) (*exec.Cmd, error) {
+func joinExistingCluster(client etcdcli.Cluster, myIPs []string) (*exec.Cmd, error) {
 	var (
 		cluster, mypeers []string
 		addResp          *etcdcli.MemberAddResponse
