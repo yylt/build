@@ -1,0 +1,30 @@
+ARG ETCD_IMAGE=gcr.io/etcd-development/etcd:v3.5.21
+
+FROM --platform=$BUILDPLATFORM golang:1.25-trixie AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETPLATFORM
+
+WORKDIR /
+
+COPY source source
+
+RUN GOARCH=${TARGETARCH} make -C /source/etcdcluster build
+
+FROM ${ETCD_IMAGE} as ETCD
+
+FROM debian:13-slim
+
+ARG TARGETPLATFORM
+
+USER root
+
+COPY --from=builder /source/etcdcluster/bin/${TARGETPLATFORM}/etcdcluster /usr/bin/
+
+COPY --from=ETCD /usr/local/bin/etcd /usr/bin/
+COPY --from=ETCD /usr/local/bin/etcdctl /usr/bin/
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends golang-cfssl && \
+    rm -rf /var/lib/apt/lists/*

@@ -3,3 +3,7 @@
 .vscode/
 *.pyc
 target/
+
+bin/
+
+vendor/

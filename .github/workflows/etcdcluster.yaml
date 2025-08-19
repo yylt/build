@@ -1,0 +1,40 @@
+name: etcdcluster
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ etcdcluster ]
+  workflow_dispatch:
+
+env:
+  Dockerfile: Dockerfile-etcdcluster
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest #[self-hosted, linux, x64]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Docker Image Build And Push
+      run: |
+        docker buildx build --no-cache \
+          --platform linux/amd64,linux/arm64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/etcdcluster:${{ env.date }} \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/etcdcluster:latest \
+          --file ./${{ env.Dockerfile }} .
+
