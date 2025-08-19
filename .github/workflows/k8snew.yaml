@@ -65,18 +65,6 @@ jobs:
         token: ${{ secrets.KPULL }}  
         path: ${{ env.PROJECT }}
 
-    - name: Docker Image(amd64) Build And Push
-      run: |
-        cd ${{ env.PROJECT }}
-        docker buildx build --no-cache \
-          --platform linux/amd64 \
-          --provenance false --sbom false \
-          --output "type=image,push=true" \
-          --build-arg "VERSION=${{ env.vbranch }}" \
-          --tag ${{ env.REGISTRY_NAME }}/captain/hyperkube:${{ env.tag }} \
-          --tag ${{ env.REGISTRY_NAME }}/production/hyperkube:${{ env.tag }} \
-          --file ../${{ env.Dockerfile }} .
-
     - name: Docker Image(arm64) Build And Push
       run: |
         cd ${{ env.PROJECT }}
@@ -88,3 +76,14 @@ jobs:
           --tag ${{ env.REGISTRY_NAME }}/arm64v8/hyperkube:${{ env.tag }} \
           --file ../${{ env.Dockerfile }} .
 
+    - name: Docker Image(amd64) Build And Push
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build --no-cache \
+          --platform linux/amd64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --build-arg "VERSION=${{ env.vbranch }}" \
+          --tag ${{ env.REGISTRY_NAME }}/captain/hyperkube:${{ env.tag }} \
+          --tag ${{ env.REGISTRY_NAME }}/production/hyperkube:${{ env.tag }} \
+          --file ../${{ env.Dockerfile }} .

@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.24.3-bullseye AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24-bullseye AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -9,7 +9,7 @@ WORKDIR /app
 COPY . .
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends rsync && \
+    apt-get install -y --no-install-recommends rsync crossbuild-essential-arm64 && \
     export KUBE_GIT_COMMIT="" && \
     export KUBE_GIT_VERSION=${VERSION} && \
     export KUBE_BUILD_PLATFORMS=${TARGETPLATFORM} && \
