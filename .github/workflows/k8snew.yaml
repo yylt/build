@@ -11,7 +11,10 @@ on:
         description: 'kubernetes branch'
         required: true
         default: 'v1.32.2'
-
+      tag:
+        description: 'image tag'
+        required: false
+        default: ''
 env:
   REPO: easystack/kubernetes
   PROJECT: kubernetes
@@ -36,8 +39,14 @@ jobs:
 
         if ${{ github.event_name == 'workflow_dispatch' }} ; then
             echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            if [ "${{ github.event.inputs.tag }}" != "" ] ; then
+                echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+            else 
+                echo "tag=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
+            fi
         else
             echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+            echo "tag=${{ env.BRANCH }}" >> $GITHUB_ENV
         fi
     - uses: actions/checkout@v4
     - uses: ./.github/actions/setup
@@ -64,8 +73,8 @@ jobs:
           --provenance false --sbom false \
           --output "type=image,push=true" \
           --build-arg "VERSION=${{ env.vbranch }}" \
-          --tag ${{ env.REGISTRY_NAME }}/captain/hyperkube:${{ env.vbranch }} \
-          --tag ${{ env.REGISTRY_NAME }}/production/hyperkube:${{ env.vbranch }} \
+          --tag ${{ env.REGISTRY_NAME }}/captain/hyperkube:${{ env.tag }} \
+          --tag ${{ env.REGISTRY_NAME }}/production/hyperkube:${{ env.tag }} \
           --file ../${{ env.Dockerfile }} .
 
     - name: Docker Image(arm64) Build And Push
@@ -76,6 +85,6 @@ jobs:
           --provenance false --sbom false \
           --output "type=image,push=true" \
           --build-arg "VERSION=${{ env.vbranch }}" \
-          --tag ${{ env.REGISTRY_NAME }}/arm64v8/hyperkube:${{ env.vbranch }} \
+          --tag ${{ env.REGISTRY_NAME }}/arm64v8/hyperkube:${{ env.tag }} \
           --file ../${{ env.Dockerfile }} .
 
