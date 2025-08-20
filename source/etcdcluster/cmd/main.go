@@ -64,7 +64,8 @@ func init() {
 func main() {
 	defer logger.Sync()
 	var (
-		err error
+		err   error
+		myips []string
 	)
 	logger.Info("Starting etcd-cluster",
 		zap.String("version", Version),
@@ -77,6 +78,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("etcd binary not found")
 	}
+
+	iplist := strings.Split(strings.TrimSpace(string(os.Getenv("POD_IPS"))), ",")
+	for _, ip := range iplist {
+		if ip != "" {
+			myips = append(myips, ip)
+		}
+	}
 	// Parse POD_NAME
 	prefix, myIndex, err := parsePodName(os.Getenv("POD_NAME"))
 	if err != nil {
@@ -84,14 +92,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	myIPs, err := readIPFile(fmt.Sprintf("%s.%s.%s.svc.cluster.local",
-		os.Getenv("POD_NAME"), os.Getenv("SERVICE_NAME"), os.Getenv("POD_NAMESPACE")))
-	if err != nil || len(myIPs) == 0 {
-		logger.Fatal("Failed to read IP file for current pod", zap.Error(err))
+	logger.Info("Current pod IP", zap.Strings("ips", myips))
+	if len(myips) == 0 {
+		logger.Fatal("No avaliable IP for current pod")
 	}
 	// Get alive endpoints
 	for true {
-		aliveEndpoints := getAliveEndpoints(prefix, util.MustAtoi(os.Getenv("MAX")), myIndex)
+		aliveEndpoints, deadnames := getAliveEndpoints(prefix, util.MustAtoi(os.Getenv("MAX")), myIndex)
 		switch len(aliveEndpoints) {
 		case 0:
 			if myIndex != 0 {
@@ -99,7 +106,7 @@ func main() {
 					zap.String("pod_name", os.Getenv("POD_NAME")))
 				break
 			}
-			cmd, err := initializeNewCluster(myIPs)
+			cmd, err := initializeNewCluster(myips)
 			if err != nil {
 				logger.Error("Failed to initialize new cluster", zap.Error(err))
 				break
@@ -111,7 +118,7 @@ func main() {
 				logger.Error("Failed to get current client", zap.Error(err))
 				break
 			}
-			cmd, err := joinExistingCluster(client, myIPs)
+			cmd, err := joinExistingCluster(client, myips, deadnames)
 			if err == nil {
 				waitExit(cmd)
 			} else {
@@ -125,7 +132,7 @@ func main() {
 func checkRequiredEnvVars() bool {
 	requiredVars := []string{
 		"SERVICE_NAME", "MAX", "NODEIP_DIR",
-		"POD_NAME", "POD_NAMESPACE",
+		"POD_NAME", "POD_NAMESPACE", "POD_IPS",
 		"ETCDCTL_CACERT", "ETCDCTL_CERT", "ETCDCTL_KEY", "ETCD_DATA_DIR",
 		"CLIENT_PORT", "PEER_PORT",
 	}
@@ -217,13 +224,12 @@ func checkReadyz(ipport string, tlscfg *tls.Config) bool {
 
 	resp, err := client.Get(url)
 	if err != nil {
-		logger.Error("Failed to check etcd health", zap.String("url", url))
+		logger.Error("Failed to check health", zap.String("url", url))
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		logger.Info("Etcd node is ready", zap.String("ipport", ipport))
 		return true
 	}
 
@@ -250,14 +256,15 @@ func peerEndponits(endpoints map[string][]string, port string, withname bool, wi
 	return addresses
 }
 
-func getAliveEndpoints(prefix string, maxNodes, myIndex int) map[string][]string {
-	aliveEndpoints := make(map[string][]string)
+func getAliveEndpoints(prefix string, maxNodes, myIndex int) (aliveEndpoints map[string][]string, deadnames map[string]struct{}) {
+
 	var (
 		wg          sync.WaitGroup
 		mu          sync.Mutex
 		client_port = os.Getenv("CLIENT_PORT")
-		podnames    []string
 	)
+	aliveEndpoints = make(map[string][]string)
+	deadnames = make(map[string]struct{})
 	// Load client cert
 	cert, err := tls.LoadX509KeyPair(os.Getenv("ETCDCTL_CERT"), os.Getenv("ETCDCTL_KEY"))
 	if err != nil {
@@ -278,6 +285,7 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) map[string][]string
 
 		ips, err := readIPFile(domain)
 		if err != nil || len(ips) == 0 {
+			deadnames[podName] = struct{}{}
 			continue
 		}
 		wg.Add(1)
@@ -289,23 +297,22 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) map[string][]string
 				ipport := net.JoinHostPort(ip, client_port)
 				if checkReadyz(ipport, tlscfg) {
 					aliveEndpoints[podName] = iplist
-					logger.Info("Found alive endpoint",
-						zap.String("pod", podName))
 					ready = true
 					break
 				}
 			}
+			mu.Lock()
+			defer mu.Unlock()
 			if ready {
-				mu.Lock()
-				defer mu.Unlock()
 				aliveEndpoints[podname] = iplist
-				podnames = append(podnames, podname)
+			} else {
+				deadnames[podname] = struct{}{}
 			}
 		}(ips, podName)
 	}
 	wg.Wait()
-	logger.Info("Total alive endpoints found", zap.Strings("all", podnames))
-	return aliveEndpoints
+	logger.Info("Total endpoints info", zap.Any("alive", aliveEndpoints), zap.Any("dead", deadnames))
+	return aliveEndpoints, deadnames
 }
 
 func getCurrentClient(aliveEndpoints map[string][]string) (etcdcli.Cluster, error) {
@@ -340,7 +347,7 @@ func getCurrentClient(aliveEndpoints map[string][]string) (etcdcli.Cluster, erro
 	return etcdcli.NewCluster(client), nil
 }
 
-func joinExistingCluster(client etcdcli.Cluster, myIPs []string) (*exec.Cmd, error) {
+func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[string]struct{}) (*exec.Cmd, error) {
 	var (
 		cluster, mypeers []string
 		addResp          *etcdcli.MemberAddResponse
@@ -352,6 +359,7 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string) (*exec.Cmd, err
 		bgct        = context.Background()
 		ctx, cancle = context.WithTimeout(bgct, 3*time.Second)
 	)
+	_, myid, _ := parsePodName(podname)
 	defer cancle()
 	resp, err := client.MemberList(etcdcli.WithRequireLeader(ctx))
 	if err != nil {
@@ -372,10 +380,28 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string) (*exec.Cmd, err
 				return startEtcd()
 			}
 		}
+		// remove not exist member
+		if _, ok := deadnames[member.Name]; ok {
+			_, id, err := parsePodName(member.Name)
+			if err != nil {
+				logger.Info("parse podname failed", zap.String("podname", member.Name), zap.Error(err))
+				return nil, err
+			}
+			if id > myid {
+				logger.Info("member is dead and behind myindex, so remove it", zap.String("member", member.Name))
+				_, err = client.MemberRemove(ctx, member.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
 	// must remove member, because memberdir not exists, but member exist
 	if myMemberID != 0 {
-		logger.Info("memberdir not exist, must remove member", zap.Uint64("id", myMemberID))
+		logger.Info("in cluster, but data not exist, should remove then rejoin",
+			zap.Uint64("id", myMemberID),
+			zap.String("name", podname),
+		)
 		_, err = client.MemberRemove(ctx, myMemberID)
 		if err != nil {
 			return nil, err
