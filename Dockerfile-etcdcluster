@@ -11,6 +11,7 @@ WORKDIR /
 COPY . .
 
 RUN GOARCH=${TARGETARCH} make -C /source/etcdcluster build
+RUN GOARCH=${TARGETARCH} make -C /source/ecsnode build
 
 FROM ${ETCD_IMAGE} as ETCD
 
@@ -21,6 +22,7 @@ ARG TARGETPLATFORM
 USER root
 
 COPY --from=builder /source/etcdcluster/bin/${TARGETPLATFORM}/etcdcluster /usr/bin/
+COPY --from=builder /source/ecsnode/bin/${TARGETPLATFORM}/ecsnode /usr/bin/
 
 COPY --from=ETCD /usr/local/bin/etcd /usr/bin/
 COPY --from=ETCD /usr/local/bin/etcdctl /usr/bin/

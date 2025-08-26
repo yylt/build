@@ -1,0 +1,18 @@
+configmap:
+  name: nodeips
+ecsnode:
+  namespace: "openstack"
+  interfaces:
+  - roller
+  - management
+  - storagepub
+  masterif: roller
+pod:
+  labels:
+    component: "etcd"
+service:
+  name: etcd
+  ports:
+  - targetPort: 2479
+    port: 2479
+    protocol: TCP

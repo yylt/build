@@ -18,6 +18,10 @@ import (
 	"syscall"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	etcdcli "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -179,7 +183,7 @@ func parsePodName(podName string) (string, int, error) {
 	return prefix, index, nil
 }
 
-func readIPFile(domain string) ([]string, error) {
+func domainIpList(domain string) ([]string, error) {
 	ips, err := net.LookupHost(domain)
 	if err != nil {
 		logger.Error("Failed to resolve domain", zap.String("domain", domain), zap.Error(err))
@@ -190,29 +194,32 @@ func readIPFile(domain string) ([]string, error) {
 		return nil, fmt.Errorf("no IPs found for domain %s", domain)
 	}
 
-	resolvedIP := ips[0]
-	logger.Info("Resolved domain", zap.String("domain", domain), zap.String("ip", resolvedIP))
+	iplist, err := readIpFile(ips[0])
+	logger.Info("Resolved domain", zap.String("domain", domain), zap.String("iplist", strings.Join(iplist, ",")))
+	return iplist, err
+}
 
-	ipFile := filepath.Join(os.Getenv("NODEIP_DIR"), resolvedIP)
+func readIpFile(ip string) ([]string, error) {
+	ipFile := filepath.Join(os.Getenv("NODEIP_DIR"), ip)
 	if !util.FileExists(ipFile) {
 		logger.Warn("IP file not found, using resolved IP directly",
-			zap.String("ipFile", ipFile), zap.String("domain", domain))
-		return []string{resolvedIP}, nil
+			zap.String("ipFile", ipFile), zap.String("reslovip", ip))
+		return []string{ip}, nil
 	}
 
 	content, err := os.ReadFile(ipFile)
 	if err != nil {
-		logger.Error("Failed to read IP file", zap.String("domain", domain), zap.Error(err))
+		logger.Error("Failed to read IP file", zap.String("reslovip", ip), zap.Error(err))
 		return nil, err
 	}
 
 	ipList := strings.Split(strings.TrimSpace(string(content)), ",")
-	logger.Info("Read IPs from file", zap.String("domain", domain), zap.Strings("ips", ipList))
+	logger.Info("Read IPs from file", zap.String("reslovip", ip), zap.Strings("ips", ipList))
 	return ipList, nil
 }
 
 func checkReadyz(ipport string, tlscfg *tls.Config) bool {
-	url := fmt.Sprintf("https://%s/readyz", ipport)
+	var url = fmt.Sprintf("https://%s/readyz", ipport)
 
 	// Setup HTTPS client
 	client := &http.Client{
@@ -256,12 +263,35 @@ func peerEndponits(endpoints map[string][]string, port string, withname bool, wi
 	return addresses
 }
 
+func getaliveByk8s() (map[string]string, error) {
+	label := os.Getenv("LABELS")
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	clientset := kubernetes.NewForConfigOrDie(config)
+	pods, err := clientset.CoreV1().Pods(os.Getenv("POD_NAMESPACE")).List(context.TODO(), metav1.ListOptions{
+		ResourceVersion: "0",
+		LabelSelector:   label,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var podip = make(map[string]string)
+
+	for _, pod := range pods.Items {
+		podip[pod.Name] = pod.Status.HostIP
+	}
+	return podip, nil
+}
+
 func getAliveEndpoints(prefix string, maxNodes, myIndex int) (aliveEndpoints map[string][]string, deadnames map[string]struct{}) {
 
 	var (
 		wg          sync.WaitGroup
 		mu          sync.Mutex
 		client_port = os.Getenv("CLIENT_PORT")
+		fromdns     = false
 	)
 	aliveEndpoints = make(map[string][]string)
 	deadnames = make(map[string]struct{})
@@ -274,16 +304,30 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) (aliveEndpoints map
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: true,
 	}
-
+	podip, err := getaliveByk8s()
+	if err != nil {
+		logger.Error("Failed to read from k8s client", zap.Error(err))
+		fromdns = true
+	}
 	for i := 0; i < maxNodes; i++ {
 		if i == myIndex {
 			continue
 		}
+		var ips []string
 		podName := fmt.Sprintf("%s-%d", prefix, i)
-		domain := fmt.Sprintf("%s.%s.%s.svc.cluster.local",
-			podName, os.Getenv("SERVICE_NAME"), os.Getenv("POD_NAMESPACE"))
+		if !fromdns {
+			hostip, ok := podip[podName]
+			if !ok {
+				logger.Info("Failed to get pod ip from k8s client", zap.String("podName", podName))
+			} else {
+				ips, err = readIpFile(hostip)
+			}
+		} else {
+			domain := fmt.Sprintf("%s.%s.%s.svc.cluster.local",
+				podName, os.Getenv("SERVICE_NAME"), os.Getenv("POD_NAMESPACE"))
+			ips, err = domainIpList(domain)
+		}
 
-		ips, err := readIPFile(domain)
 		if err != nil || len(ips) == 0 {
 			deadnames[podName] = struct{}{}
 			continue
@@ -305,8 +349,6 @@ func getAliveEndpoints(prefix string, maxNodes, myIndex int) (aliveEndpoints map
 			defer mu.Unlock()
 			if ready {
 				aliveEndpoints[podname] = iplist
-			} else {
-				deadnames[podname] = struct{}{}
 			}
 		}(ips, podName)
 	}
@@ -359,7 +401,6 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[s
 		bgct        = context.Background()
 		ctx, cancle = context.WithTimeout(bgct, 3*time.Second)
 	)
-	_, myid, _ := parsePodName(podname)
 	defer cancle()
 	resp, err := client.MemberList(etcdcli.WithRequireLeader(ctx))
 	if err != nil {
@@ -382,17 +423,10 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[s
 		}
 		// remove not exist member
 		if _, ok := deadnames[member.Name]; ok {
-			_, id, err := parsePodName(member.Name)
+			logger.Info("member is dead but in cluster, so remove it", zap.String("member", member.Name))
+			_, err = client.MemberRemove(ctx, member.ID)
 			if err != nil {
-				logger.Info("parse podname failed", zap.String("podname", member.Name), zap.Error(err))
 				return nil, err
-			}
-			if id > myid {
-				logger.Info("member is dead and behind myindex, so remove it", zap.String("member", member.Name))
-				_, err = client.MemberRemove(ctx, member.ID)
-				if err != nil {
-					return nil, err
-				}
 			}
 		}
 	}
