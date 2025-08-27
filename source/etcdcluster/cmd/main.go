@@ -397,6 +397,7 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[s
 		myMemberID uint64
 		podname    = os.Getenv("POD_NAME")
 		peerport   = os.Getenv("PEER_PORT")
+		nonLearn   int
 
 		bgct        = context.Background()
 		ctx, cancle = context.WithTimeout(bgct, 3*time.Second)
@@ -420,6 +421,9 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[s
 				logger.Info("memberdir exists, and include current pod, start etcd")
 				return startEtcd()
 			}
+		}
+		if !member.IsLearner {
+			nonLearn++
 		}
 		// remove not exist member
 		if _, ok := deadnames[member.Name]; ok {
@@ -449,10 +453,14 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[s
 	ctx2, cancle2 := context.WithTimeout(bgct, 3*time.Second)
 	defer cancle2()
 	if len(resp.Members) != 1 {
+		if nonLearn == 1 {
+			logger.Info("member count > 1, but non learner is 1", zap.Int("nonLearn", nonLearn))
+			return nil, fmt.Errorf("non learner is 1")
+		}
 		logger.Info("add member then start etcd")
 		addResp, err = client.MemberAdd(ctx2, mypeers)
 	} else {
-		logger.Info("only one endpoint, start etcd as learner then prompt")
+		logger.Info("one master, start etcd as learner then prompt")
 		addResp, err = client.MemberAddAsLearner(ctx2, mypeers)
 	}
 	if err != nil {
@@ -474,12 +482,12 @@ func joinExistingCluster(client etcdcli.Cluster, myIPs []string, deadnames map[s
 	if len(resp.Members) == 1 {
 		count := 1
 		for count < 10 {
+			time.Sleep(2 * time.Second)
 			_, err = client.MemberPromote(bgct, addResp.Member.ID)
 			if err == nil {
 				logger.Info("promote member success", zap.String("member", podname))
 				break
 			}
-			time.Sleep(1 * time.Second)
 			count++
 		}
 	}

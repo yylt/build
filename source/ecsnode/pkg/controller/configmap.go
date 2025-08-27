@@ -123,7 +123,7 @@ func (s *ConfigMapSync) Start(ctx context.Context) error {
 				}
 				s.mu.Unlock()
 				if len(changed) > 0 {
-					klog.Infof("host ip changed: %v, will trigger reconcile", changed)
+					klog.Infof("host changed: %v, will trigger reconcile", changed)
 					s.triggerch <- struct{}{}
 				}
 			case _, ok := <-s.triggerch:

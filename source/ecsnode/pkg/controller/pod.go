@@ -38,6 +38,10 @@ type StatIp struct {
 	HostIp sets.Set[string]
 }
 
+func (s *StatIp) String() string {
+	return fmt.Sprintf("ready=%v, hostIp=%v", s.Ready, s.NodeIp)
+}
+
 type PodCtrl struct {
 	config *PodConfig
 
@@ -289,12 +293,13 @@ func (h *PodCtrl) stat(pod *corev1.Pod) *StatIp {
 		h.hostmu.RUnlock()
 	}
 
-	klog.Infof("pod(%s): hostIP(%s), ready: %v", poname, ipset.UnsortedList(), ready)
-	return &StatIp{
+	stat := &StatIp{
 		NodeIp: pod.Status.HostIP,
 		Ready:  ready,
 		HostIp: ipset,
 	}
+	klog.Infof("pod(%s) stat: %s", poname, stat)
+	return stat
 }
 
 func isReady(po *corev1.Pod) bool {
