@@ -1,0 +1,18 @@
+# Multi-stage build for multi-arch support
+# Build stage
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm as builder
+
+ARG TARGETPLATFORM
+
+WORKDIR /app
+COPY . .
+
+RUN BUILD_PLATFORMS=$TARGETPLATFORM make build
+
+FROM alpine:3.15
+
+ARG TARGETPLATFORM
+
+COPY --from=builder /app/bin/$TARGETPLATFORM/ /
+
+RUN apk -U --no-cache add bash 
