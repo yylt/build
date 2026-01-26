@@ -56,10 +56,10 @@ jobs:
         fi
 
     - name: Check out repo code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Check out helm code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: ${{ env.REPO }}
         ref: ${{ env.vbranch }}
@@ -67,7 +67,7 @@ jobs:
         path: ${{ env.PROJECT }}
 
     - name: Check out kubernetes code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: easystack/kubernetes
         ref: v1.28.2-helm

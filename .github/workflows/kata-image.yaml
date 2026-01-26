@@ -59,10 +59,10 @@ jobs:
         go-version: 1.22
 
     - name: Check out repo code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Check out build code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: easystack/kata-containers
         ref: ${{ env.BRANCH }}

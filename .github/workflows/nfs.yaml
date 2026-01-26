@@ -23,10 +23,10 @@ jobs:
         echo "date=$(date +'%Y%m%d%H%M')" >> "$GITHUB_OUTPUT"
 
     - name: Check out repo code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Check out build code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: ${{ env.REPO }}
         ref: ${{ env.BRANCH }}

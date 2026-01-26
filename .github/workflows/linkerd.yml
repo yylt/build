@@ -22,7 +22,7 @@ jobs:
       run: echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
 
     - name: Check out repo code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -35,7 +35,7 @@ jobs:
         go-version: '^1.20'
 
     - name: Check out build code1
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: ${{ env.REPO1 }}
         ref: ${{ env.BRANCH1 }}
