@@ -30,7 +30,7 @@ jobs:
         ref: ${{ env.BRANCH }}
         path: ${{ env.PROJECT }}
 
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v6
       name: Set up golang
       with:
         go-version: '^1.21'
