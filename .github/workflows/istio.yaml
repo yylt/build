@@ -41,7 +41,7 @@ jobs:
         path: ${{ env.PROJECT2 }}
         token: ${{ secrets.KPULL }} 
 
-    - uses: actions/setup-go@v4
+    - uses: actions/setup-go@v6
       name: Set up golang
       with:
         go-version: '^1.21'
