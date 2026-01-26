@@ -46,7 +46,7 @@ jobs:
         fi
     - uses: actions/checkout@v4
     - uses: ./.github/actions/setup
-    - uses: docker/login-action@v2
+    - uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY_NAME }}
         username: ${{ env.REGISTRY_USER }}
