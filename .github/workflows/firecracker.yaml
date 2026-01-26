@@ -27,10 +27,10 @@ jobs:
       id: go
 
     - name: Check out repo code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Check out build code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: firecracker-microvm/firecracker-containerd
         ref: ${{ env.BRANCH }}
