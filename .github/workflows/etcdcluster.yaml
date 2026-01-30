@@ -72,4 +72,6 @@ jobs:
           --provenance false --sbom false \
           --output "type=image,push=true" \
           --tag ${{ env.REGISTRY_NAME }}/multiarch/etcdcluster:${{ env.tag }} \
+          --tag ${{ env.REGISTRY_NAME }}/arm64v8/etcdcluster:${{ env.tag }} \
+          --tag ${{ env.REGISTRY_NAME }}/production/etcdcluster:${{ env.tag }} \
           --file ../${{ env.Dockerfile }} .
