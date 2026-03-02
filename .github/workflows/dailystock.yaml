@@ -1,0 +1,71 @@
+name: dailystock
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ dailystock ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'branch'
+        required: true
+        default: 'v3.4.7'
+env:
+  REPO: ZhuLinsen/daily_stock_analysis
+  PROJECT: dailystock
+  BRANCH: v3.4.7
+  Dockerfile: Dockerfile-etcdcluster
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest #[self-hosted, linux, x64]
+    steps:
+    
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            if [ "${{ github.event.inputs.tag }}" != "" ] ; then
+                echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+            else 
+                echo "tag=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
+            fi
+        else
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+            echo "tag=${{ env.BRANCH }}" >> $GITHUB_ENV
+        fi
+    - uses: actions/checkout@v6
+    - uses: ./.github/actions/setup
+    - name: Login to Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out build code
+      uses: actions/checkout@v6
+      with:
+        repository: ${{ env.REPO }}
+        ref: ${{ env.vbranch }}
+        path: ${{ env.PROJECT }}
+
+    - name: Docker Image Build And Push
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build --no-cache \
+          --platform linux/amd64,linux/arm64 \
+          --provenance false --sbom false \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/yylt/dailystock:${{ env.tag }} \
+          --file ./docker/Dockerfile .
