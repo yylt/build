@@ -9,15 +9,16 @@ on:
   workflow_dispatch:
 env:
   PROJECT: ingress-nginx
-  BRANCH: controller-v1.11.3
+  BRANCH: controller-v1.15.0
   REGISTRY_NAME: "docker.io"
   REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
   REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+  SCRIPT_VERSION: "nginx-1.27"
 
 jobs:
   build-x86:
     name: Build x86
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
     - uses: ./.github/actions/setup
@@ -43,7 +44,7 @@ jobs:
       with:
         REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
         PROJECT: ${{ env.PROJECT }}
-        SCRIPT_VERSION: nginx
+        SCRIPT_VERSION: ${{ env.SCRIPT_VERSION }}
         NO_GMSSL: y
         SKIP_INGRESS: y
 
@@ -75,7 +76,7 @@ jobs:
       with:
         REGISTRY_NAME: ${{ env.REGISTRY_NAME }}
         PROJECT: ${{ env.PROJECT }}
-        SCRIPT_VERSION: nginx
+        SCRIPT_VERSION: ${{ env.SCRIPT_VERSION }}
         NO_GMSSL: y
         SKIP_INGRESS: y
 
