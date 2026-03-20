@@ -10,7 +10,7 @@ on:
       branch:
         description: 'kubernetes branch'
         required: true
-        default: 'v1.32.2'
+        default: 'v1.35.3-es'
       tag:
         description: 'image tag'
         required: false
@@ -18,7 +18,7 @@ on:
 env:
   REPO: easystack/kubernetes
   PROJECT: kubernetes
-  BRANCH: v1.32.2-es
+  BRANCH: v1.35.3-es
   Dockerfile: Dockerfile-k8snew
   REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
   REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
