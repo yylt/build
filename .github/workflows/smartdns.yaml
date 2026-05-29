@@ -1,0 +1,77 @@
+name: smartdns
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ smartdns ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'smartdns tag/branch'
+        required: true
+        default: 'master'
+      tag:
+        description: 'image tag'
+        required: false
+        default: ''
+env:
+  PROJECT: smartdns
+  BRANCH: master
+  DOCKERHUB_REPO: yylt/smartdns
+  REGISTRY_NAME: "docker.io"
+  REGISTRY_USER: "${{ secrets.DOCKER_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.DOCKER_HUB_PASSWORD }}"
+  Dockerfile: Dockerfile-smartdns
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Getting image tag
+      id: tag
+      run: |
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "vbranch=${{ github.event.inputs.branch }}"  >> $GITHUB_ENV
+            if [ "${{ github.event.inputs.tag }}" != "" ] ; then
+                echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+            else
+                echo "tag=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
+            fi
+        else
+            echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
+            echo "tag=${{ env.BRANCH }}" >> $GITHUB_ENV
+        fi
+
+    - uses: actions/checkout@v6
+    - uses: ./.github/actions/setup
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out build code
+      uses: actions/checkout@v6
+      with:
+        repository: pymumu/smartdns
+        ref: ${{ env.vbranch }}
+        path: ${{ env.PROJECT }}
+
+    - name: Docker Buildx (push)
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build \
+          --no-cache \
+          --provenance false --sbom false \
+          --platform linux/amd64,linux/arm64 \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/${{ env.DOCKERHUB_REPO }}:${{ env.tag }} \
+          --file ../${{ env.Dockerfile }} ./
