@@ -35,7 +35,7 @@ jobs:
         else
             echo "vbranch=${{ env.BRANCH }}" >> $GITHUB_ENV
         fi
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: ./.github/actions/setup
     - name: Login to Registry
       uses: docker/login-action@v4
@@ -44,7 +44,7 @@ jobs:
         username: ${{ env.REGISTRY_USER }}
         password: ${{ env.REGISTRY_PASS }}
     - name: Check out build code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: pacexy/flow
         ref: ${{ env.vbranch }}
