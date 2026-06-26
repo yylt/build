@@ -49,7 +49,7 @@ jobs:
       uses: docker/setup-qemu-action@v4
 
     - name: Check out repo code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Docker Registry Login
       shell: bash

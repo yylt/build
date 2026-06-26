@@ -53,7 +53,7 @@ jobs:
             echo "tag=${{ env.BRANCH }}" >> $GITHUB_ENV
         fi
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: ./.github/actions/setup
 
     - name: Login to Docker Hub
@@ -64,7 +64,7 @@ jobs:
         password: ${{ env.REGISTRY_PASS }}
 
     - name: Check out build code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: ${{ env.REPO }}
         ref: ${{ env.vbranch }}

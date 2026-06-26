@@ -65,10 +65,10 @@ jobs:
         sudo apt-get update && sudo apt-get install -y crossbuild-essential-arm64
         
     - name: Check out repo code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Check out build code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: ${{ env.REPO }}
         ref: ${{ env.vbranch }}
