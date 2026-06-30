@@ -13,7 +13,7 @@ REPO_URL=http://ports.ubuntu.com
 case "$ARCH" in
 	aarch64) 
 		DEB_ARCH=arm64; 
-		REPO_URL=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ 
+		REPO_URL=https://mirrors.ustc.edu.cn/ubuntu-ports/ 
 	;;
 	ppc64le) 
 		DEB_ARCH=ppc64el
@@ -23,7 +23,7 @@ case "$ARCH" in
 	;;
 	x86_64) 
 		DEB_ARCH=amd64; 
-		REPO_URL=https://mirrors.tuna.tsinghua.edu.cn/ubuntu
+		REPO_URL=https://mirrors.ustc.edu.cn/ubuntu
 	;;
 	*) die "$ARCH not supported"
 esac
