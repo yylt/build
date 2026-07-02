@@ -33,19 +33,19 @@ info()
 check_valid() {
     if [[ $kata_src_path == "" ]]; then
         die "kata src path should not be null"
-    fi 
+    fi
     if [ ! -d "$patch_dir" ]; then
         die "kata patch path should exist"
-    fi 
+    fi
     if [ ! -d "$config_dir" ]; then
         die "kata config path should exist"
-    fi 
+    fi
     case "$build_target" in
-		kunlun|mellanox|nvidia|ecr) 
+		kunlun|mellanox|nvidia|ecr)
             info "build target is ${build_target}"
         ;;
-		*) 
-            die "target must be one of 'kunlun|mellanox|nvidia|ecr' " 
+		*)
+            die "target must be one of 'kunlun|mellanox|nvidia|ecr' "
         ;;
 	esac
 
@@ -58,20 +58,20 @@ kernel() {
     # 已存在，则什么都不做
     if [ -f ${bk_script_dir}/${arch_target}-vmlinuz.container ]; then
         info "${bk_script_dir}/${arch_target}-vmlinuz.container exist, skip build image"
-        return 
+        return
     fi
 
     build_deb=1
 
-    # 拷贝 config 
+    # 拷贝 config
     if [ -d "${bk_script_dir}/${kernel_version}/configs" ]; then
         find "${bk_script_dir}/${kernel_version}/configs" -type f -name "common*" -exec cp {} "${config_dir}/fragments/common/" \;
-    fi 
+    fi
 
     # 架构相关
     case "$arch_target" in
-		aarch64) 
-            if [ -d "${patch_dir}/arm-experimental" ]; then  
+		aarch64)
+            if [ -d "${patch_dir}/arm-experimental" ]; then
                 cp -f ${patch_dir}/arm-experimental/* ${patch_dir}/
                 rm -f ${patch_dir}/no_patches.txt
             fi
@@ -96,11 +96,11 @@ kernel() {
 
     cp -L "/usr/share/kata-containers/${image}" "${bk_script_dir}/${arch_target}-vmlinuz.container"
 
-    # 准备 deb 
+    # 准备 deb
     if [[ $build_deb == 1 ]]; then
         apt-get install -y kmod cpio
         make deb-pkg -C ${kata_src_path}/kata-linux-${kernel_version}-96
-    fi 
+    fi
 }
 
 
@@ -108,12 +108,12 @@ image() {
     # 已存在，则什么都不做
     if [ -f ${bk_script_dir}/$target-containers.img ]; then
         info "${bk_script_dir}/$target-containers.img exist, skip build image"
-        return 
+        return
     fi
 
-    # 准备 rootfs 
+    # 准备 rootfs
     cp -af ${bk_script_dir}/${kernel_version}/${build_target} ${kata_src_path}/tools/osbuilder/rootfs-builder/
-    
+
     # 准备 env
 	export USE_DOCKER=true
 	export LIBC=gnu
@@ -121,7 +121,7 @@ image() {
     export SECCOMP=no
 	export ROOTFS_DIR="${kata_src_path}/tools/osbuilder/rootfs-builder/rootfs"
 	export AGENT_SOURCE_BIN="${kata_src_path}/src/agent/target/$(uname -m)-unknown-linux-gnu/release/kata-agent"
-    export EXTRA_PKGS="bash curl nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"
+    export EXTRA_PKGS="multipath-tools bash curl nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"
     target=${build_target}
     case "$build_target" in
 		mellanox)
@@ -133,7 +133,7 @@ image() {
             cp -af ${kata_src_path}/linux*deb ${kata_src_path}/tools/osbuilder/rootfs-builder/mellanox/
         ;;
         nvidia)
-            # 拷贝 linux header 
+            # 拷贝 linux header
             cp -af ${kata_src_path}/linux*deb ${kata_src_path}/tools/osbuilder/rootfs-builder/nvidia/
             # 下载 nvidia driver
             if [[ $nvidia_download_url == "" ]];then
@@ -141,7 +141,7 @@ image() {
             fi
             filename=$(basename "$nvidia_download_url")
             curl -L ${nvidia_download_url} -o ${kata_src_path}/tools/osbuilder/rootfs-builder/nvidia/$filename
-            
+
             # 下载 mlnx driver
             if [[ $mlnx_download_url == "" ]];then
                 die "url for mlnx is null"
@@ -169,7 +169,7 @@ image() {
 
 main() {
     local cmd=""
-	while getopts "t:k:s:c:" opt; do	
+	while getopts "t:k:s:c:" opt; do
 		case "$opt" in
 			t)
 				build_target="${OPTARG}"
@@ -194,7 +194,7 @@ main() {
 
     # patchers 目录，拷贝 patch
     patch_dir="${kata_src_path}/tools/packaging/kernel/patches/${major_version}.x"
-    
+
 
     # configs 目录
     config_dir="${kata_src_path}/tools/packaging/kernel/configs"

@@ -32,10 +32,10 @@ else
 endif
 
 
-all: generate-config build-kernel build-image ecr-runtime containerd-shim-v2 docker-push 
+all: generate-config build-kernel build-image ecr-runtime containerd-shim-v2 docker-push
 
 .PHONY: target
-target: 
+target:
 	chmod +x ../kata-image/build.sh
 	sudo -E ../kata-image/build.sh -k "5.15.63" -s "$(PWD)" -t "$(TARGET)"
 
@@ -94,7 +94,7 @@ endif
 
 
 package:
-	sudo -E apt update 
+	sudo -E apt update
 	sudo -E apt install -y \
 		gcc \
 		make \
@@ -114,7 +114,7 @@ package:
 		bc
 	sudo -E mkdir -p ~/.cargo/
 	sudo -E cp ../kata-image/cargo-config.toml ~/.cargo/config
-	
+
 build-kernel: package
 ifeq ($(shell arch),aarch64)
 	cp -a tools/packaging/kernel/patches/5.15.x/arm-experimental/* tools/packaging/kernel/patches/5.15.x/; \
@@ -135,7 +135,7 @@ build-image: agent
 	export SECCOMP=no; \
 	export LIBC=gnu; \
 	export DEBUG=true; \
-	export EXTRA_PKGS="gcc make curl gnupg coreutils apt tar kmod pkg-config libc-dev libc6-dev pciutils coreutils curl tar nfs-common pciutils bridge-utils iproute2 iputils-ping iputils-arping"; \
+	export EXTRA_PKGS="make curl gnupg coreutils apt tar kmod pkg-config libc-dev libc6-dev pciutils nfs-common bridge-utils iproute2 iputils-ping iputils-arping"; \
 	export ROOTFS_DIR="$${dir}/tools/osbuilder/rootfs-builder/rootfs"; \
 	export AGENT_SOURCE_BIN="$${dir}/src/agent/target/$$arch-unknown-linux-gnu/release/kata-agent"; \
 	sudo -E ./rootfs-builder/rootfs.sh  ubuntu; \
