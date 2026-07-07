@@ -1,0 +1,78 @@
+name: capi
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ capi ]
+  workflow_dispatch:
+
+env:
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+  REPO_EKS_PREFIX: ${{ secrets.REPO_EKS_PREFIX }}
+  REPO_EKS_USER: ${{ secrets.REPO_EKS_USER }}
+  REPO_EKS_TOKEN: ${{ secrets.REPO_EKS_TOKEN }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Get image tag
+      id: tag
+      run: |
+        echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v7
+
+    - name: Login to Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Clone eks-kubean
+      run: |
+        git clone --depth 1 \
+          https://${{ env.REPO_EKS_USER }}:${{ env.REPO_EKS_TOKEN }}@${{ env.REPO_EKS_PREFIX }}/eks-kubean.git eks-kubean
+      env:
+        GIT_SSL_NO_VERIFY: 1
+
+    - name: Clone eks-cluster-api
+      run: |
+        git clone --depth 1 \
+          https://${{ env.REPO_EKS_USER }}:${{ env.REPO_EKS_TOKEN }}@${{ env.REPO_EKS_PREFIX }}/eks-cluster-api.git eks-cluster-api
+      env:
+        GIT_SSL_NO_VERIFY: 1
+
+    - name: Clone eks-cluster-api-provider
+      run: |
+        git clone --depth 1 \
+          https://${{ env.REPO_EKS_USER }}:${{ env.REPO_EKS_TOKEN }}@${{ env.REPO_EKS_PREFIX }}/eks-cluster-api-provider.git eks-cluster-api-provider
+      env:
+        GIT_SSL_NO_VERIFY: 1
+
+    - name: Clone captain
+      run: |
+        git clone --depth 1 \
+          https://${{ env.REPO_EKS_USER }}:${{ env.REPO_EKS_TOKEN }}@${{ env.REPO_EKS_PREFIX }}/captain.git captain
+      env:
+        GIT_SSL_NO_VERIFY: 1
+
+    - name: Docker Buildx (multi-arch)
+      run: |
+        docker buildx build \
+          --no-cache \
+          --provenance false --sbom false \
+          --platform linux/amd64,linux/arm64 \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/multiarch/capi:${{ env.tag }} \
+          --file ./Dockerfile-capi .

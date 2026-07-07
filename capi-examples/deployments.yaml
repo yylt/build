@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: capi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-api-manager
+  namespace: capi
+  labels:
+    app: cluster-api-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-api-manager
+  template:
+    metadata:
+      labels:
+        app: cluster-api-manager
+    spec:
+      serviceAccountName: capi-manager
+      containers:
+      - name: manager
+        image: your-registry/capi-controller:latest
+        command: ["/bins/cluster-api-manager"]
+        args:
+        - --leader-elect
+        - --metrics-bind-addr=:8080
+        - --health-probe-bind-addr=:8081
+        ports:
+        - name: metrics
+          containerPort: 8080
+        - name: health
+          containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capo-manager
+  namespace: capi
+  labels:
+    app: capo-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: capo-manager
+  template:
+    metadata:
+      labels:
+        app: capo-manager
+    spec:
+      serviceAccountName: capo-manager
+      containers:
+      - name: manager
+        image: your-registry/capi-controller:latest
+        command: ["/bins/capo-manager"]
+        args:
+        - --leader-elect
+        - --metrics-bind-addr=:8080
+        - --health-probe-bind-addr=:8081
+        ports:
+        - name: metrics
+          containerPort: 8080
+        - name: health
+          containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ansible-controller
+  namespace: capi
+  labels:
+    app: ansible-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ansible-controller
+  template:
+    metadata:
+      labels:
+        app: ansible-controller
+    spec:
+      serviceAccountName: capo-manager
+      containers:
+      - name: controller
+        image: your-registry/capi-controller:latest
+        command: ["/bins/ansible-controller"]
+        args:
+        - --leader-elect
+        - --health-addr=:9440
+        ports:
+        - name: health
+          containerPort: 9440
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9440
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9440
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubean-operator
+  namespace: capi
+  labels:
+    app: kubean-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubean-operator
+  template:
+    metadata:
+      labels:
+        app: kubean-operator
+    spec:
+      serviceAccountName: kubean-operator
+      containers:
+      - name: operator
+        image: your-registry/capi-controller:latest
+        command: ["/bins/kubean-operator"]
+        args:
+        - --leader-elect
+        - --metrics-bind-addr=:8080
+        - --health-probe-bind-addr=:8081
+        ports:
+        - name: metrics
+          containerPort: 8080
+        - name: health
+          containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubean-admission
+  namespace: capi
+  labels:
+    app: kubean-admission
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubean-admission
+  template:
+    metadata:
+      labels:
+        app: kubean-admission
+    spec:
+      serviceAccountName: kubean-operator
+      containers:
+      - name: admission
+        image: your-registry/capi-controller:latest
+        command: ["/bins/kubean-admission"]
+        args:
+        - --metrics-bind-addr=:8080
+        - --health-probe-bind-addr=:8081
+        ports:
+        - name: metrics
+          containerPort: 8080
+        - name: health
+          containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
