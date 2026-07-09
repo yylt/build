@@ -1,0 +1,63 @@
+name: captain
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ captain ]
+  workflow_dispatch:
+    inputs:
+      repo_branch:
+        description: captain repo branch
+        required: false
+        default: psbc-eks
+
+env:
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+  REPO_EKS_PREFIX: ${{ secrets.REPO_EKS_PREFIX }}
+  REPO_EKS_USER: ${{ secrets.REPO_EKS_USER }}
+  REPO_EKS_TOKEN: ${{ secrets.REPO_EKS_TOKEN }}
+  REPO_BRANCH: ${{ github.event.inputs.repo_branch || 'psbc-eks' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Get image tag
+      id: tag
+      run: |
+        echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v7
+
+    - name: Login to Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Clone captain
+      run: |
+        git clone --depth 1 --branch "${REPO_BRANCH}" \
+          https://${{ env.REPO_EKS_USER }}:${{ env.REPO_EKS_TOKEN }}@${{ env.REPO_EKS_PREFIX }}/captain.git captain
+      env:
+        GIT_SSL_NO_VERIFY: 1
+
+    - name: Docker Buildx (multi-arch)
+      run: |
+        docker buildx build \
+          --no-cache \
+          --provenance false --sbom false \
+          --platform linux/amd64,linux/arm64 \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/multiarch/captain:${{ env.tag }} \
+          --file ./Dockerfile-captain ./captain
