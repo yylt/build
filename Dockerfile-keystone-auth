@@ -1,0 +1,15 @@
+FROM registry.k8s.io/provider-os/k8s-keystone-auth:v1.36.0 as source
+
+FROM alpine:3.20
+
+ARG TARGETARCH
+
+RUN apk -U --no-cache add openssl curl jq bash
+
+RUN curl -fsSLo /usr/bin/kubectl \
+    "https://dl.k8s.io/release/v1.36.0/bin/linux/${TARGETARCH}/kubectl" \
+    && chmod +x /usr/bin/kubectl
+
+COPY --from=source /bin/k8s-keystone-auth /bin/k8s-keystone-auth
+
+ENTRYPOINT ["/bin/k8s-keystone-auth"]

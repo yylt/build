@@ -1,0 +1,37 @@
+FROM python:3.11-slim-bookworm
+
+ARG APT_SOURCE=
+ARG PIP_INDEX_URL=
+ARG PIP_TRUSTED_HOST=mirrors.aliyun.com
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN if [ -n "${APT_SOURCE}" ]; then \
+        sed -i "s|http://deb.debian.org/debian|${APT_SOURCE}|g" /etc/apt/sources.list.d/debian.sources; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bash \
+        sshpass \
+        openssh-client \
+        curl \
+        rsync \
+        git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && rm -rf /root/.cache
+
+WORKDIR /opt/captain
+
+COPY . .
+
+RUN pip install --no-cache-dir \
+    ${PIP_INDEX_URL:+--index-url ${PIP_INDEX_URL}} \
+    pbr>=1.6 \
+    ansible==2.10.6 \
+    netaddr \
+    jinja2>=2.9.6 \
+    && find /usr/local/lib/python3.11/site-packages -name "*.pyc" -delete \
+    && find /usr/local/lib/python3.11/site-packages -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true

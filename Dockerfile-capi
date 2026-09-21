@@ -12,72 +12,37 @@ ENV GO111MODULE=on
 WORKDIR /build
 
 # ============================================================
-# 1. eks-kubean: CRD + 2 binaries
+# 1. eks-kubean: 2 binaries
 # ============================================================
 COPY eks-kubean /build/eks-kubean
 
 WORKDIR /build/eks-kubean
-RUN curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/${BUILDPLATFORM}/kubectl" \
-    && chmod +x /usr/local/bin/kubectl
-
-RUN mkdir -p /crds/kubean \
-    && cp api/charts/crds/*.yaml /crds/kubean/ \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go mod vendor \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go mod vendor \
     && CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -mod vendor -o /bins/kubean-operator ./cmd/kubean-operator/main.go \
     && CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -mod vendor -o /bins/kubean-admission ./cmd/kubean-admission/main.go
 
 # ============================================================
-# 2. eks-cluster-api: CRD + 1 binary (manager)
+# 2. eks-cluster-api: 1 binary (manager)
 # ============================================================
 COPY eks-cluster-api /build/eks-cluster-api
 
 WORKDIR /build/eks-cluster-api
-RUN kubectl kustomize config/crd > /crds/cluster-api.yaml \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -o /bins/cluster-api-manager .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -o /bins/cluster-api-manager .
 
 # ============================================================
-# 3. eks-cluster-api-provider: CRD + 2 binaries (manager + ansible-controller)
+# 3. eks-cluster-api-provider: 2 binaries (manager + ansible-controller)
 # ============================================================
 COPY eks-cluster-api-provider /build/eks-cluster-api-provider
 
 WORKDIR /build/eks-cluster-api-provider
-RUN kubectl kustomize config/crd > /crds/capo.yaml \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags "-extldflags '-static'" -o /bins/capo-manager . \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags "-extldflags '-static'" -o /bins/capo-manager . \
     && CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags "-extldflags '-static'" -o /bins/ansible-controller ./cmd/ansible-controller
 
 # ============================================================
 # Runtime image
 # ============================================================
-COPY captain /opt/captain
+FROM debian:12-slim
 
-FROM python:3.10-slim
-
-ARG TARGETOS
-ARG TARGETARCH
-ARG TARGETPLATFORM
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/${TARGETARCH}/kubectl" \
-    && chmod +x /usr/local/bin/kubectl
-
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && /root/.local/bin/uv venv /opt/venv \
-    && /root/.local/bin/uv pip install --python /opt/venv/bin/python \
-        pbr>=1.6 \
-        "ansible==2.10.6" \
-        netaddr \
-        "jinja2>=2.9.6" \
-    && rm -rf /root/.local/bin/uv /root/.local/share/uv /root/.cache/uv \
-    && find /opt/venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/venv -name '*.pyc' -delete
-
-ENV PATH="/opt/venv/bin:/root/.local/bin:${PATH}"
-
-COPY --from=build /crds /crds
 COPY --from=build /bins /bins
-COPY --from=build /opt/captain /opt/captain
 
 CMD ["/bin/bash"]

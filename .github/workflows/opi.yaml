@@ -14,7 +14,7 @@ on:
         options:
           - '4k'
           - '16k'
-        default: '4k'
+        default: '16k'
 
 env:
   # orangepi-build (rk3588 kernel family cross-compiles on x86_64 using the
