@@ -3,6 +3,8 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches: [ opi ]
   workflow_dispatch:
     inputs:
       page:
@@ -23,12 +25,12 @@ env:
   BOARD: orangepi5pro
   BRANCH: current
   BUILD_OPT: kernel
-  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_NAME: "ghcr.io"
   REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
-  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  REGISTRY_PASS: "${{ secrets.GHCR_PASSWORD }}"
   Dockerfile: Dockerfile-opi
   BUILDX_NO_DEFAULT_ATTESTATIONS: 1
-  KERNEL_PAGE: "${{ github.event.inputs.page }}"
+  KERNEL_PAGE: "4k"
 
 jobs:
   build:
@@ -37,6 +39,18 @@ jobs:
     steps:
     - name: Check out repo code
       uses: actions/checkout@v7
+
+    - name: Getting kernel page
+      run: |
+        set -x
+        echo "trigger by ${{ github.event_name }}"
+        echo "sha256 is ${{ github.sha }}"
+
+        if ${{ github.event_name == 'workflow_dispatch' }} ; then
+            echo "KERNEL_PAGE=${{ github.event.inputs.page }}"  >> $GITHUB_ENV
+        else
+            echo "KERNEL_PAGE=${{ env.KERNEL_PAGE }}" >> $GITHUB_ENV
+        fi
 
     - name: Login to Registry
       uses: docker/login-action@v4.5.2
@@ -102,10 +116,10 @@ jobs:
         set -e
         cd ${{ github.workspace }}/opi-artifacts
         TAG="$(date +'%Y%m%d%H%M')"
-        IMAGE="${{ env.REGISTRY_NAME }}/arm64v8/opi-kernel-${{ env.KERNEL_PAGE }}"
+        IMAGE="${{ env.REGISTRY_NAME }}/yylt/opi-kernel-${{ env.KERNEL_PAGE }}"
         echo "image: ${IMAGE}"
         docker buildx build --no-cache \
-          --platform linux/arm64 \
+          --platform linux/amd64 \
           --provenance false --sbom false \
           --build-arg PAGE=${{ env.KERNEL_PAGE }} \
           --output "type=image,push=true" \
