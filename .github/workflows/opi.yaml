@@ -1,0 +1,114 @@
+name: opi
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      page:
+        description: 'Kernel page size'
+        required: true
+        type: choice
+        options:
+          - '4k'
+          - '16k'
+        default: '16k'
+
+env:
+  # orangepi-build (rk3588 kernel family cross-compiles on x86_64 using the
+  # external aarch64 toolchain that the build system downloads automatically)
+  BUILD_REPO: orangepi-xunlong/orangepi-build
+  BUILD_BRANCH: next
+  PROJECT: orangepi-build
+  BOARD: orangepi5pro
+  BRANCH: current
+  BUILD_OPT: kernel
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  Dockerfile: Dockerfile-opi
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+  KERNEL_PAGE: "${{ github.event.inputs.page }}"
+
+jobs:
+  build:
+    name: Build OPI ${{ github.event.inputs.page }} kernel
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Check out repo code
+      uses: actions/checkout@v7
+
+    - name: Login to Registry
+      uses: docker/login-action@v4.5.2
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Check out orangepi-build (next)
+      uses: actions/checkout@v7
+      with:
+        repository: ${{ env.BUILD_REPO }}
+        ref: ${{ env.BUILD_BRANCH }}
+        token: ${{ secrets.KPULL }}
+        path: ${{ env.PROJECT }}
+
+    - name: Apply patches
+      run: |
+        set -e
+        cd ${{ env.PROJECT }}
+        # Board config + kernel config (MALI/DRM removed) + custom extension.
+        # The 16k variant also sets the 16k page size; the 4k variant keeps the
+        # upstream default 4k.
+        git apply "${{ github.workspace }}/orangepi-scripts/opi5pro-current.d/opi5pro-${{ env.KERNEL_PAGE }}.patch"
+        # Copy the two log-suppression patches that custom-extension.sh applies at build time
+        mkdir -p external/patch/kernel
+        cp "${{ github.workspace }}/orangepi-scripts/opi5pro-current.d/external/patch/kernel/"*.patch external/patch/kernel/
+
+    - name: Build kernel inside orangepi-build container
+      run: |
+        set -e
+        cd ${{ env.PROJECT }}
+        IMG=orangepi-build:ci-${{ github.run_id }}
+        docker build -t "$IMG" -f external/config/templates/Dockerfile .
+        timeout 28800 docker run --rm --privileged \
+          -v "${{ github.workspace }}/${{ env.PROJECT }}:/root/orangepi" \
+          "$IMG" \
+          BOARD=${{ env.BOARD }} BRANCH=${{ env.BRANCH }} BUILD_OPT=${{ env.BUILD_OPT }} \
+          KERNEL_CONFIGURE=no RELEASE=jammy
+        # restore the modified config so the working tree is left clean (cosmetic)
+        git checkout -- external/config/kernel/linux-rockchip-rk3588-current-opi5pro.config external/config/boards/orangepi5pro.conf external/extensions/custom-extension.sh 2>/dev/null || true
+
+    - name: Collect kernel debs
+      run: |
+        set -e
+        SRC=${{ github.workspace }}/${{ env.PROJECT }}/output/debs
+        echo "::group::list debs"
+        ls -lh "$SRC" || true
+        echo "::endgroup::"
+        mkdir -p ${{ github.workspace }}/opi-artifacts
+        # image + headers + dtb (+ libc-dev) for the opi5pro board
+        find "$SRC" -maxdepth 2 -type f -name '*.deb' \( \
+          -name 'linux-image-*' -o -name 'linux-headers-*' -o -name 'linux-dtb-*' -o -name 'linux-libc-dev-*' \) \
+          -exec cp -t ${{ github.workspace }}/opi-artifacts/ {} +
+        # fall back: grab everything if the naming convention changed
+        if [ -z "$(ls -A ${{ github.workspace }}/opi-artifacts 2>/dev/null)" ]; then
+          find "$SRC" -maxdepth 2 -type f -name '*.deb' -exec cp -t ${{ github.workspace }}/opi-artifacts/ {} +
+        fi
+        ls -lh ${{ github.workspace }}/opi-artifacts
+
+    - name: Push kernel image to registry
+      run: |
+        set -e
+        cd ${{ github.workspace }}/opi-artifacts
+        TAG="$(date +'%Y%m%d%H%M')"
+        IMAGE="${{ env.REGISTRY_NAME }}/arm64v8/opi-kernel-${{ env.KERNEL_PAGE }}"
+        echo "image: ${IMAGE}"
+        docker buildx build --no-cache \
+          --platform linux/arm64 \
+          --provenance false --sbom false \
+          --build-arg PAGE=${{ env.KERNEL_PAGE }} \
+          --output "type=image,push=true" \
+          --tag ${IMAGE}:${TAG} \
+          --tag ${IMAGE}:latest \
+          --file ${{ github.workspace }}/${{ env.Dockerfile }} .

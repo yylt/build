@@ -1,0 +1,35 @@
+# Orange Pi 5 Pro (rk3588) kernel artifacts image.
+#
+# Build context for this Dockerfile is a directory that contains the compiled
+# Orange Pi kernel *.deb packages produced by orangepi-build (BUILD_OPT=kernel):
+#
+#   docker buildx build \
+#     --platform linux/arm64 \
+#     --build-arg PAGE=16k \
+#     --tag <registry>/arm64v8/opi-kernel:<tag> \
+#     --file ./Dockerfile-opi ./opi-artifacts
+#
+# The kernel .deb packages are built for a glibc (Debian/Ubuntu) userland, so
+# they are shipped *as artifacts* inside the Alpine image rather than installed
+# (Alpine uses musl libc and cannot boot these debs directly). Mount /opt/opi-debs
+# or `docker cp` them out to flash/install on the board.
+
+FROM alpine:3.20
+
+ARG PAGE=16k
+LABEL org.opencontainers.image.title="opi5pro-kernel" \
+      org.opencontainers.image.description="Orange Pi 5 Pro (rk3588) kernel .deb packages built from orangepi-build next branch" \
+      org.opencontainers.image.vendor="yylt" \
+      page="${PAGE}"
+
+RUN mkdir -p /opt/opi-debs
+
+# Copy every compiled kernel package (image / headers / dtb / libc-dev) into the image.
+COPY *.deb /opt/opi-debs/
+
+RUN echo "Orange Pi 5 Pro kernel packages (page size: ${PAGE})" > /opt/opi-debs/README.txt \
+    && (ls -1 /opt/opi-debs/*.deb >> /opt/opi-debs/README.txt 2>/dev/null || true) \
+    && cat /opt/opi-debs/README.txt
+
+WORKDIR /opt/opi-debs
+CMD ["sh", "-c", "ls -lh /opt/opi-debs"]
