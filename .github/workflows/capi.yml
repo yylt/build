@@ -60,13 +60,6 @@ jobs:
       env:
         GIT_SSL_NO_VERIFY: 1
 
-    - name: Clone captain
-      run: |
-        git clone --depth 1 \
-          https://${{ env.REPO_EKS_USER }}:${{ env.REPO_EKS_TOKEN }}@${{ env.REPO_EKS_PREFIX }}/captain.git captain
-      env:
-        GIT_SSL_NO_VERIFY: 1
-
     - name: Docker Buildx (multi-arch)
       run: |
         docker buildx build \
