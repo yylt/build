@@ -1,0 +1,234 @@
+diff --git a/external/config/boards/orangepi5pro.conf b/external/config/boards/orangepi5pro.conf
+index ad3f22d..9c755a3 100644
+--- a/external/config/boards/orangepi5pro.conf
++++ b/external/config/boards/orangepi5pro.conf
+@@ -12,3 +12,6 @@ SKIP_BOOTSPLASH="yes" # Skip boot splash patch, conflicts with CONFIG_VT=yes
+ DISTRIB_TYPE_LEGACY="bullseye bookworm bionic focal jammy"
+ DISTRIB_TYPE_CURRENT="bullseye bookworm jammy"
+ REVISION="1.0.8"
++
++# Enable custom extension
++enable_extension "custom-extension"
+diff --git a/external/config/kernel/linux-rockchip-rk3588-current-opi5pro.config b/external/config/kernel/linux-rockchip-rk3588-current-opi5pro.config
+index 94fb169..c686773 100644
+--- a/external/config/kernel/linux-rockchip-rk3588-current-opi5pro.config
++++ b/external/config/kernel/linux-rockchip-rk3588-current-opi5pro.config
+@@ -96,10 +96,14 @@ CONFIG_ARCH_WANT_DEFAULT_BPF_JIT=y
+ # BPF subsystem
+ #
+ CONFIG_BPF_SYSCALL=y
+-# CONFIG_BPF_JIT is not set
++CONFIG_BPF_JIT=y
++CONFIG_BPF_JIT_ALWAYS_ON=y
++CONFIG_BPF_JIT_DEFAULT_ON=y
+ # CONFIG_BPF_UNPRIV_DEFAULT_OFF is not set
+ CONFIG_USERMODE_DRIVER=y
+-# CONFIG_BPF_PRELOAD is not set
++CONFIG_BPF_PRELOAD=y
++CONFIG_BPF_PRELOAD_UMD=m
++CONFIG_BPF_LSM=y
+ # end of BPF subsystem
+ 
+ CONFIG_PREEMPT_VOLUNTARY_BUILD=y
+@@ -924,7 +929,6 @@ CONFIG_MMU_NOTIFIER=y
+ CONFIG_DEFAULT_MMAP_MIN_ADDR=32768
+ CONFIG_ARCH_SUPPORTS_MEMORY_FAILURE=y
+ # CONFIG_MEMORY_FAILURE is not set
+-CONFIG_ARCH_WANTS_THP_SWAP=y
+ # CONFIG_TRANSPARENT_HUGEPAGE is not set
+ CONFIG_CMA=y
+ # CONFIG_CMA_INACTIVE is not set
+@@ -973,14 +977,16 @@ CONFIG_UNIX=y
+ CONFIG_UNIX_SCM=y
+ CONFIG_AF_UNIX_OOB=y
+ # CONFIG_UNIX_DIAG is not set
+-# CONFIG_TLS is not set
++CONFIG_TLS=y
++# CONFIG_TLS_DEVICE is not set
++CONFIG_TLS_TOE=y
+ CONFIG_XFRM=y
+ CONFIG_XFRM_ALGO=y
+ CONFIG_XFRM_USER=y
+ # CONFIG_XFRM_INTERFACE is not set
+ # CONFIG_XFRM_SUB_POLICY is not set
+ # CONFIG_XFRM_MIGRATE is not set
+-# CONFIG_XFRM_STATISTICS is not set
++CONFIG_XFRM_STATISTICS=y
+ CONFIG_XFRM_ESP=m
+ CONFIG_NET_KEY=y
+ # CONFIG_NET_KEY_MIGRATE is not set
+@@ -1012,9 +1018,34 @@ CONFIG_INET_ESP=m
+ # CONFIG_INET_ESPINTCP is not set
+ # CONFIG_INET_IPCOMP is not set
+ CONFIG_INET_TABLE_PERTURB_ORDER=16
+-# CONFIG_INET_DIAG is not set
+-# CONFIG_TCP_CONG_ADVANCED is not set
++CONFIG_INET_DIAG=y
++CONFIG_INET_TCP_DIAG=y
++# CONFIG_INET_UDP_DIAG is not set
++CONFIG_INET_RAW_DIAG=y
++# CONFIG_INET_DIAG_DESTROY is not set
++CONFIG_TCP_CONG_ADVANCED=y
++CONFIG_TCP_CONG_BIC=m
+ CONFIG_TCP_CONG_CUBIC=y
++CONFIG_TCP_CONG_WESTWOOD=y
++CONFIG_TCP_CONG_HTCP=y
++CONFIG_TCP_CONG_HSTCP=y
++# CONFIG_TCP_CONG_HYBLA is not set
++# CONFIG_TCP_CONG_VEGAS is not set
++# CONFIG_TCP_CONG_NV is not set
++# CONFIG_TCP_CONG_SCALABLE is not set
++# CONFIG_TCP_CONG_LP is not set
++CONFIG_TCP_CONG_VENO=y
++# CONFIG_TCP_CONG_YEAH is not set
++# CONFIG_TCP_CONG_ILLINOIS is not set
++# CONFIG_TCP_CONG_DCTCP is not set
++# CONFIG_TCP_CONG_CDG is not set
++CONFIG_TCP_CONG_BBR=y
++CONFIG_DEFAULT_CUBIC=y
++# CONFIG_DEFAULT_HTCP is not set
++# CONFIG_DEFAULT_VENO is not set
++# CONFIG_DEFAULT_WESTWOOD is not set
++# CONFIG_DEFAULT_BBR is not set
++# CONFIG_DEFAULT_RENO is not set
+ CONFIG_DEFAULT_TCP_CONG="cubic"
+ # CONFIG_TCP_MD5SIG is not set
+ CONFIG_IPV6=y
+@@ -1035,7 +1066,9 @@ CONFIG_IPV6=y
+ # CONFIG_IPV6_RPL_LWTUNNEL is not set
+ # CONFIG_IPV6_IOAM6_LWTUNNEL is not set
+ CONFIG_NETLABEL=y
+-# CONFIG_MPTCP is not set
++CONFIG_MPTCP=y
++CONFIG_INET_MPTCP_DIAG=y
++CONFIG_MPTCP_IPV6=y
+ CONFIG_NETWORK_SECMARK=y
+ CONFIG_NET_PTP_CLASSIFY=y
+ # CONFIG_NETWORK_PHY_TIMESTAMPING is not set
+@@ -1394,6 +1427,7 @@ CONFIG_BRIDGE_EBT_NFLOG=m
+ CONFIG_BPFILTER=y
+ CONFIG_BPFILTER_UMH=m
+ CONFIG_IP_DCCP=m
++CONFIG_INET_DCCP_DIAG=m
+ 
+ #
+ # DCCP CCIDs Configuration
+@@ -1417,6 +1451,7 @@ CONFIG_SCTP_DEFAULT_COOKIE_HMAC_MD5=y
+ # CONFIG_SCTP_DEFAULT_COOKIE_HMAC_NONE is not set
+ CONFIG_SCTP_COOKIE_HMAC_MD5=y
+ CONFIG_SCTP_COOKIE_HMAC_SHA1=y
++CONFIG_INET_SCTP_DIAG=m
+ CONFIG_RDS=m
+ CONFIG_RDS_TCP=m
+ CONFIG_RDS_DEBUG=y
+@@ -2426,7 +2461,7 @@ CONFIG_NET_VENDOR_ASIX=y
+ # CONFIG_SPI_AX88796C is not set
+ # CONFIG_NET_VENDOR_ATHEROS is not set
+ CONFIG_NET_VENDOR_MOTORCOMM=y
+-# CONFIG_FUXI is not set
++CONFIG_FUXI=y
+ # CONFIG_NET_VENDOR_BROADCOM is not set
+ CONFIG_NET_VENDOR_CADENCE=y
+ # CONFIG_MACB is not set
+@@ -2489,7 +2524,6 @@ CONFIG_NET_VENDOR_REALTEK=y
+ # CONFIG_8139CP is not set
+ # CONFIG_8139TOO is not set
+ CONFIG_R8168=m
+-# CONFIG_R8169 is not set
+ CONFIG_R8125=m
+ CONFIG_REALTEK_PGTOOL=m
+ # CONFIG_NET_VENDOR_RENESAS is not set
+@@ -5391,9 +5398,9 @@ CONFIG_ROCKCHIP_MPP_VDPU2=y
+ CONFIG_ROCKCHIP_MPP_VEPU2=y
+ CONFIG_ROCKCHIP_MPP_IEP2=y
+ CONFIG_ROCKCHIP_MPP_JPGDEC=y
+-# CONFIG_ROCKCHIP_MPP_JPGENC is not set
++CONFIG_ROCKCHIP_MPP_JPGENC=y
+ CONFIG_ROCKCHIP_MPP_AV1DEC=y
+-# CONFIG_ROCKCHIP_MPP_VDPP is not set
++CONFIG_ROCKCHIP_MPP_VDPP=y
+ # CONFIG_ROCKCHIP_DVBM is not set
+ 
+ #
+@@ -7841,6 +7848,7 @@ CONFIG_NFS_SWAP=y
+ CONFIG_NFS_USE_KERNEL_DNS=y
+ CONFIG_NFS_DISABLE_UDP_SUPPORT=y
+ CONFIG_NFSD=m
++# CONFIG_NFSD_V2 is not set
+ # CONFIG_NFSD_V3_ACL is not set
+ # CONFIG_NFSD_V4 is not set
+ CONFIG_GRACE_PERIOD=y
+diff --git a/external/extensions/custom-extension.sh b/external/extensions/custom-extension.sh
+new file mode 100755
+index 0000000..c26a0dc
+--- /dev/null
++++ b/external/extensions/custom-extension.sh
+@@ -0,0 +1,68 @@
++#!/usr/bin/env bash
++#
++# Extension Name: custom patch
++# Description: Adds patch support for Orange Pi 5 Pro
++# Author: Orange Pi Build System
++# Dependencies: None
++# Supported Boards: orangepi5pro
++# Supported Branches: current
++#
++
++# Extension configuration
++PATCH_FILE=(
++	"${EXTER}/patch/kernel/0000-log-bcmdhd.patch"
++	"${EXTER}/patch/kernel/0002-log-fuxi.patch"
++)
++
++custom_extension_apply_patch_file() {
++	local patch_file="$1"
++	pushd "${kerneldir}" >/dev/null || exit_with_error ""Custom Extension" couldn't enter kerneldir" "${kerneldir}"
++	if patch --forward --strip=1 --input="${patch_file}" --silent; then
++		display_alert ""Custom Extension"" "Applied patch $(basename "${patch_file}")" "info"
++	else
++		local status=$?
++		if [[ ${status} -eq 1 ]]; then
++			display_alert ""Custom Extension"" "Patch already applied: $(basename "${patch_file}")" "wrn"
++		else
++			popd >/dev/null
++			exit_with_error ""Custom Extension" patch failed" "${patch_file}"
++		fi
++	fi
++	popd >/dev/null
++}
++
++custom_extension_normalize_line_endings() {
++	local target_dir="$1"
++
++	if [[ -z "${target_dir}" || ! -d "${target_dir}" ]]; then
++		return
++	fi
++
++	python3 - <<'PY' "${target_dir}"
++import pathlib
++import sys
++
++root = pathlib.Path(sys.argv[1])
++for path in root.rglob('*'):
++    if not path.is_file():
++        continue
++    data = path.read_bytes()
++    if b'\r' not in data:
++        continue
++    new_data = data.replace(b'\r\n', b'\n')
++    if new_data != data:
++        path.write_bytes(new_data)
++PY
++}
++
++# Hook: Install before kernel configuration
++custom_kernel_config__install_custom_extension() {
++	# Apply patches
++	for patch_file in "${PATCH_FILE[@]}"; do
++		if [[ -f "${patch_file}" ]]; then
++			custom_extension_apply_patch_file "${patch_file}"
++		else
++			display_alert "Custom Extension" "Patch file not found: ${patch_file}" "wrn"
++		fi
++	done
++}

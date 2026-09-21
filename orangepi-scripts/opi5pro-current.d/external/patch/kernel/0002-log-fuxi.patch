@@ -1,0 +1,12 @@
+diff --git a/drivers/net/ethernet/motorcomm/fuxi-gmac-ethtool.c b/drivers/net/ethernet/motorcomm/fuxi-gmac-ethtool.c
+--- a/drivers/net/ethernet/motorcomm/fuxi-gmac-ethtool.c
++++ b/drivers/net/ethernet/motorcomm/fuxi-gmac-ethtool.c
+@@ -426,7 +426,7 @@
+     case ETHTOOL_GRXRINGS:
+     	cmd->data = pdata->rx_q_count;
+     	ret = 0;
+-    	DPRINTK("fxmac, get_rxnfc for rx ring cnt\n"); 
++    	//DPRINTK("fxmac, get_rxnfc for rx ring cnt\n"); 
+     	break;
+     case ETHTOOL_GRXCLSRLCNT:
+     	cmd->rule_cnt = 0;
