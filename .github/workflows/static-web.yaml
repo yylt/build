@@ -147,7 +147,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 构建并推送镜像
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: build-context
           file: ./Dockerfile-static-web
