@@ -1,0 +1,162 @@
+name: static-web
+on:
+  push:
+    branches: [main,static]
+    paths:
+      - 'scripts/remove-css-blocks.sh'
+      - 'scripts/strip-promo-in-app.js'
+      - 'Dockerfile-static-web'
+      - '.github/workflows/static-web.yaml'
+  workflow_dispatch:
+    inputs:
+      SQUOOSH_REF:
+        description: 'squoosh branch/ref (default: dev)'
+        required: false
+        default: 'dev'
+      EXCALIDRAW_REF:
+        description: 'excalidraw branch/ref (default: master)'
+        required: false
+        default: 'master'
+      TAG:
+        description: 'image tag suffix (default: latest)'
+        required: false
+        default: 'latest'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/static-web
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: build squoosh (dev) static web files
+  # ---------------------------------------------------------------------------
+  build-squoosh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出 squoosh (dev)
+        uses: actions/checkout@v4
+        with:
+          repository: GoogleChromeLabs/squoosh
+          ref: ${{ github.event.inputs.SQUOOSH_REF || 'dev' }}
+          token: ${{ secrets.KPULL }}
+          path: squoosh
+
+      - name: 检出本仓库（取转换脚本）
+        uses: actions/checkout@v4
+        with:
+          path: self
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 删除 style.css 的 info + footer 块
+        run: |
+          bash "$GITHUB_WORKSPACE/self/scripts/remove-css-blocks.sh" \
+            squoosh/src/shared/prerendered-app/Intro/style.css
+
+      - name: 安装依赖并编译
+        working-directory: squoosh
+        run: |
+          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+          npm run build
+
+      - name: 上传静态产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: squoosh-static
+          path: squoosh/build
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Job 2: build excalidraw (master) static web files
+  # ---------------------------------------------------------------------------
+  build-excalidraw:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出 excalidraw (master)
+        uses: actions/checkout@v4
+        with:
+          repository: excalidraw/excalidraw
+          ref: ${{ github.event.inputs.EXCALIDRAW_REF || 'master' }}
+          token: ${{ secrets.KPULL }}
+          path: excalidraw
+
+      - name: 检出本仓库（取转换脚本）
+        uses: actions/checkout@v4
+        with:
+          path: self
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 删除推广内容 (promo)
+        run: |
+          cp "$GITHUB_WORKSPACE/self/scripts/strip-promo-in-app.js" \
+             excalidraw/scripts/strip-promo-in-app.js
+          node excalidraw/scripts/strip-promo-in-app.js
+
+      - name: 安装依赖并编译
+        working-directory: excalidraw
+        run: |
+          yarn install --frozen-lockfile
+          yarn --cwd ./excalidraw-app build
+
+      - name: 上传静态产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: excalidraw-static
+          path: excalidraw/excalidraw-app/build
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Job 3: 打包 alpine 镜像并推送 ghcr.io
+  # ---------------------------------------------------------------------------
+  docker:
+    needs: [build-squoosh, build-excalidraw]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出本仓库
+        uses: actions/checkout@v4
+
+      - name: 下载静态产物
+        uses: actions/download-artifact@v4
+        with:
+          name: squoosh-static
+          path: build-context/squoosh
+      - name: 下载静态产物
+        uses: actions/download-artifact@v4
+        with:
+          name: excalidraw-static
+          path: build-context/excalidraw
+
+      - name: 设置 Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建并推送镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: build-context
+          file: ./Dockerfile-static-web
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          build-args: |
+            REPO=${{ github.repository }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.event.inputs.TAG || 'latest' }}
+            ${{ env.IMAGE }}:${{ github.sha }}

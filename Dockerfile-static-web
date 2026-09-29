@@ -1,0 +1,18 @@
+# 静态 web 文件打包镜像。
+# 构建上下文 (build-context) 由 GitHub Actions 工作流提供：
+#   build-context/squoosh     —— squoosh(dev) 编译产物
+#   build-context/excalidraw  —— excalidraw(master) 编译产物
+# 两个站点仅作为静态文件放入 alpine，不启动任何服务，
+# 由外部（ingress / 静态服务器 / 挂载卷）自行托管。
+FROM alpine:3.20
+
+ARG REPO=unknown
+LABEL org.opencontainers.image.source="https://github.com/${REPO}"
+LABEL org.opencontainers.image.description="Static web files: squoosh (dev) + excalidraw (master)"
+
+RUN mkdir -p /static-web/squoosh /static-web/excalidraw
+
+COPY squoosh/    /static-web/squoosh/
+COPY excalidraw/ /static-web/excalidraw/
+
+CMD ["/bin/sh", "-c", "echo 'static web files at /static-web/squoosh and /static-web/excalidraw'; tail -f /dev/null"]
