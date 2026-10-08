@@ -126,12 +126,12 @@ jobs:
         uses: actions/checkout@v7
 
       - name: 下载静态产物
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: squoosh-static
           path: build-context/squoosh
       - name: 下载静态产物
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: excalidraw-static
           path: build-context/excalidraw
