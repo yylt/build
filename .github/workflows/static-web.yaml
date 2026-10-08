@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出 squoosh (dev)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: GoogleChromeLabs/squoosh
           ref: ${{ github.event.inputs.SQUOOSH_REF || 'dev' }}
@@ -45,7 +45,7 @@ jobs:
           path: squoosh
 
       - name: 检出本仓库（取转换脚本）
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: self
 
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出 excalidraw (master)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: excalidraw/excalidraw
           ref: ${{ github.event.inputs.EXCALIDRAW_REF || 'master' }}
@@ -87,7 +87,7 @@ jobs:
           path: excalidraw
 
       - name: 检出本仓库（取转换脚本）
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: self
 
@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出本仓库
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 下载静态产物
         uses: actions/download-artifact@v4
