@@ -1,10 +1,18 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
+# Host header allowlist for the MCP HTTP transport. FastMCP auto-enables DNS
+# rebinding protection for its default host (127.0.0.1), so a server bound to
+# 0.0.0.0 rejects external requests with 421 unless the setting is overridden
+# before startup. Default "*" accepts any Host; a comma-separated list restricts
+# it. Can be baked in via --build-arg and overridden at runtime.
+ARG ALLOWED_HOSTS="*"
+
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/app/.venv \
     PATH=/app/.venv/bin:$PATH \
-    GERRIT_CONFIG_PATH=/etc/gerrit/gerrit_config.json
+    GERRIT_CONFIG_PATH=/etc/gerrit/gerrit_config.json \
+    GERRIT_MCP_ALLOWED_HOSTS=${ALLOWED_HOSTS}
 
 WORKDIR /app
 
@@ -21,8 +29,41 @@ RUN uv sync --frozen --no-dev --no-cache \
     && useradd --uid 10001 --create-home --shell /usr/sbin/nologin mcp \
     && chown -R mcp:mcp /app
 
+RUN cat > /usr/local/bin/gerrit-mcp-entrypoint.py <<'PY'
+import os
+import sys
+
+from mcp.server.transport_security import TransportSecuritySettings
+
+from gerrit_mcp_server.main import cli_main, mcp
+
+
+def main() -> None:
+    raw = os.environ.get("GERRIT_MCP_ALLOWED_HOSTS", "*").strip()
+    if not raw or raw == "*":
+        # No Host restriction; "*" is not a pattern FastMCP's validator knows.
+        security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
+    else:
+        hosts = [host.strip() for host in raw.split(",") if host.strip()]
+        security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=hosts,
+        )
+    mcp.settings.transport_security = security
+    # main.py calls streamable_http_app() at import time, which caches the
+    # session manager with the settings captured there; drop it so the
+    # transport is rebuilt with the settings above.
+    mcp._session_manager = None
+    cli_main(["gerrit-mcp-server", *sys.argv[1:]])
+
+
+if __name__ == "__main__":
+    main()
+PY
+
 USER mcp
 
 EXPOSE 6322
 
-ENTRYPOINT ["python", "-m", "gerrit_mcp_server.main", "--host", "0.0.0.0", "--port", "6322"]
+ENTRYPOINT ["python", "/usr/local/bin/gerrit-mcp-entrypoint.py"]
+CMD ["--host", "0.0.0.0", "--port", "6322"]

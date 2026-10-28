@@ -12,6 +12,10 @@ on:
         description: 'GerritCodeReview/gerrit-mcp-server ref (default: master)'
         required: false
         default: 'master'
+      ALLOWED_HOSTS:
+        description: 'Host header allowlist: "*" (default) accepts any Host, or a comma-separated list to restrict'
+        required: false
+        default: '*'
 
 permissions:
   contents: read
@@ -59,6 +63,8 @@ jobs:
           push: true
           provenance: false
           sbom: false
+          build-args: |
+            ALLOWED_HOSTS=${{ github.event.inputs.ALLOWED_HOSTS }}
           tags: |
             ${{ env.IMAGE }}:${{ env.TAG }}
             ${{ env.IMAGE }}:latest
