@@ -27,10 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出本仓库
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 检出 atlassian-mcp-server 源码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: atlassian/atlassian-mcp-server
           ref: ${{ github.event.inputs.REF || 'main' }}
@@ -38,10 +38,10 @@ jobs:
           path: ${{ env.PROJECT }}
 
       - name: 设置 Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: 登录 ghcr.io
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -51,7 +51,7 @@ jobs:
         run: echo "TAG=$(date -u +%Y%m%d%H%M)" >> "$GITHUB_ENV"
 
       - name: 构建并推送镜像
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./${{ env.PROJECT }}
           file: ./Dockerfile-atlassian-mcp-server
