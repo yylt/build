@@ -133,7 +133,7 @@ docker buildx build \
 
 ## MCP 服务
 
-- `Dockerfile-gerrit-mcp-server`：基于 `GerritCodeReview/gerrit-mcp-server` 源码（workflow 检出后作为构建上下文，uv 同步依赖）构建 Gerrit MCP Server，HTTP 模式监听 6322，端点 `/mcp`，配置由 `GERRIT_CONFIG_PATH` 指定。
+- `Dockerfile-gerrit-mcp-server`：基于 `GerritCodeReview/gerrit-mcp-server` 源码（workflow 检出后作为构建上下文，uv 同步依赖）构建 Gerrit MCP Server，HTTP 模式监听 6322，端点 `/mcp`，配置由 `GERRIT_CONFIG_PATH` 指定；FastMCP 默认会因 DNS rebinding 校验返回 421，镜像默认放开 Host 校验（`GERRIT_MCP_ALLOWED_HOSTS=*`，构建参数 `ALLOWED_HOSTS` 可预置），也可设为逗号分隔的 Host 白名单。
 - `Dockerfile-atlassian-mcp-server`：nginx 反向代理镜像（配置在 Dockerfile 内联生成，构建上下文为 workflow 检出的 `atlassian/atlassian-mcp-server`），把集群内请求转发到 `https://mcp.atlassian.com`，并通过 `ATLASSIAN_MCP_AUTH` 注入 `Basic <base64(email:api_token)>` 凭证，健康检查 `/healthz`。
 
 ## 网关 / 门户

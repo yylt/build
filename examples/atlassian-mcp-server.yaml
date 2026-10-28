@@ -65,6 +65,9 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              # nginx 主进程（root）启动时需 chown 临时目录并切换到 nginx
+              # worker 用户，drop ALL 后必须显式保留这三个 capability。
+              add: ["CHOWN", "SETUID", "SETGID"]
 
 ---
 apiVersion: v1

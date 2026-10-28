@@ -54,6 +54,10 @@ spec:
           env:
             - name: GERRIT_CONFIG_PATH
               value: /etc/gerrit/gerrit_config.json
+            # Any Host is accepted by default. Uncomment to restrict the
+            # transport to the Ingress host.
+            # - name: GERRIT_MCP_ALLOWED_HOSTS
+            #   value: gerrit-mcp.example.com
           volumeMounts:
             - name: config
               mountPath: /etc/gerrit
