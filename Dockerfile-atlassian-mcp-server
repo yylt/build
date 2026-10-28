@@ -1,0 +1,43 @@
+FROM nginx:1.27-alpine
+
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# ATLASSIAN_MCP_AUTH: full Authorization header value, e.g.
+# "Basic <base64(email:api_token)>". Injected at container start by the nginx
+# entrypoint (envsubst); empty means requests go upstream unauthenticated.
+ENV ATLASSIAN_MCP_AUTH=""
+
+RUN mkdir -p /etc/nginx/templates \
+    && cat > /etc/nginx/templates/default.conf.template <<'EOF'
+server {
+    listen 8080;
+    server_name _;
+
+    client_max_body_size 16m;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Path passthrough: clients use /v2/mcp (or /v1/mcp) exactly as with the
+    # hosted server. The upstream credential is injected here so callers only
+    # need network access to this Service.
+    location / {
+        proxy_pass https://mcp.atlassian.com;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $proxy_host;
+        proxy_set_header Authorization "${ATLASSIAN_MCP_AUTH}";
+        proxy_ssl_server_name on;
+        proxy_ssl_name $proxy_host;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+EOF
+
+EXPOSE 8080

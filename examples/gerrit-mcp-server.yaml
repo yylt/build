@@ -1,0 +1,123 @@
+# gerrit_config.json holds Gerrit credentials, so it is a Secret rather than a
+# ConfigMap. Replace the placeholder credentials before applying.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gerrit-mcp-config
+  namespace: default
+type: Opaque
+stringData:
+  gerrit_config.json: |
+    {
+      "default_gerrit_base_url": "https://gerrit.example.com/",
+      "gerrit_hosts": [
+        {
+          "name": "example",
+          "external_url": "https://gerrit.example.com/",
+          "authentication": {
+            "type": "http_basic",
+            "username": "mcp-bot",
+            "auth_token": "REPLACE_WITH_GERRIT_HTTP_PASSWORD"
+          }
+        }
+      ]
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gerrit-mcp-server
+  namespace: default
+  labels:
+    app: gerrit-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gerrit-mcp-server
+  template:
+    metadata:
+      labels:
+        app: gerrit-mcp-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: gerrit-mcp-server
+          image: ghcr.io/yylt/gerrit-mcp-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 6322
+          env:
+            - name: GERRIT_CONFIG_PATH
+              value: /etc/gerrit/gerrit_config.json
+          volumeMounts:
+            - name: config
+              mountPath: /etc/gerrit
+              readOnly: true
+          livenessProbe:
+            tcpSocket:
+              port: 6322
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: 6322
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          secret:
+            secretName: gerrit-mcp-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gerrit-mcp-server
+  namespace: default
+spec:
+  selector:
+    app: gerrit-mcp-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: 6322
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gerrit-mcp-server
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    # MCP endpoint: https://gerrit-mcp.example.com/mcp
+    - host: gerrit-mcp.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gerrit-mcp-server
+                port:
+                  number: 80

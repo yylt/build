@@ -1,0 +1,28 @@
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PATH=/app/.venv/bin:$PATH \
+    GERRIT_CONFIG_PATH=/etc/gerrit/gerrit_config.json
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+COPY gerrit_mcp_server ./gerrit_mcp_server
+COPY gerrit_mcp_server_task ./gerrit_mcp_server_task
+COPY gerrit_mcp_server_depends_on ./gerrit_mcp_server_depends_on
+COPY gerrit_mcp_server_code_owners ./gerrit_mcp_server_code_owners
+
+RUN uv sync --frozen --no-dev --no-cache \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --uid 10001 --create-home --shell /usr/sbin/nologin mcp \
+    && chown -R mcp:mcp /app
+
+USER mcp
+
+EXPOSE 6322
+
+ENTRYPOINT ["python", "-m", "gerrit_mcp_server.main", "--host", "0.0.0.0", "--port", "6322"]
