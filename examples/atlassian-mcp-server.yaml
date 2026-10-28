@@ -1,0 +1,106 @@
+# ATLASSIAN_MCP_AUTH is the complete Authorization header value:
+#   printf 'you@example.com:API_TOKEN' | base64
+#   -> Basic <base64 output>
+# API token authentication must be enabled by an Atlassian admin.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: atlassian-mcp-auth
+  namespace: default
+type: Opaque
+stringData:
+  ATLASSIAN_MCP_AUTH: "Basic REPLACE_WITH_BASE64_OF_EMAIL_COLON_API_TOKEN"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atlassian-mcp-server
+  namespace: default
+  labels:
+    app: atlassian-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atlassian-mcp-server
+  template:
+    metadata:
+      labels:
+        app: atlassian-mcp-server
+    spec:
+      containers:
+        - name: atlassian-mcp-server
+          image: ghcr.io/yylt/atlassian-mcp-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: ATLASSIAN_MCP_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: atlassian-mcp-auth
+                  key: ATLASSIAN_MCP_AUTH
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atlassian-mcp-server
+  namespace: default
+spec:
+  selector:
+    app: atlassian-mcp-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: atlassian-mcp-server
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    # MCP endpoint: https://atlassian-mcp.example.com/v2/mcp
+    # (or /v1/mcp for the API-token endpoint)
+    - host: atlassian-mcp.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: atlassian-mcp-server
+                port:
+                  number: 80

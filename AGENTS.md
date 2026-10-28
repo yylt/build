@@ -131,6 +131,11 @@ docker buildx build \
 - `Dockerfile-vllm`：构建 vLLM 大模型推理镜像（含 CPU 构建/运行支持）。
 - `Dockerfile-paddle`：构建 PaddlePaddle / RKNN 工具链镜像。
 
+## MCP 服务
+
+- `Dockerfile-gerrit-mcp-server`：基于 `GerritCodeReview/gerrit-mcp-server` 源码（workflow 检出后作为构建上下文，uv 同步依赖）构建 Gerrit MCP Server，HTTP 模式监听 6322，端点 `/mcp`，配置由 `GERRIT_CONFIG_PATH` 指定。
+- `Dockerfile-atlassian-mcp-server`：nginx 反向代理镜像（配置在 Dockerfile 内联生成，构建上下文为 workflow 检出的 `atlassian/atlassian-mcp-server`），把集群内请求转发到 `https://mcp.atlassian.com`，并通过 `ATLASSIAN_MCP_AUTH` 注入 `Basic <base64(email:api_token)>` 凭证，健康检查 `/healthz`。
+
 ## 网关 / 门户
 
 - `Dockerfile-defaultbackend`：构建 ingress-nginx 默认后端镜像。
