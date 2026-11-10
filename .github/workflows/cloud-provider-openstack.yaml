@@ -1,0 +1,79 @@
+name: cloud-provider-openstack
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'easystack/cloud-provider-openstack 源码分支或 tag'
+        required: false
+        default: '1.35-es'
+      tag:
+        description: '镜像 tag（默认与 branch 相同）'
+        required: false
+        default: ''
+
+env:
+  PROJECT: cloud-provider-openstack
+  REGISTRY_NAME: "${{ secrets.MY_HUB_NAME }}"
+  REGISTRY_USER: "${{ secrets.MY_HUB_USER }}"
+  REGISTRY_PASS: "${{ secrets.MY_HUB_PASSWORD }}"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  build:
+    name: Build ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: openstack-cloud-controller-manager
+            image: openstack-cloud-controller-manager
+          - target: cinder-csi-plugin
+            image: cinder-csi-plugin
+          - target: k8s-keystone-auth
+            image: keystone-auth
+    steps:
+
+    - name: Getting image tag
+      run: |
+        branch="${{ github.event.inputs.branch || '1.35-es' }}"
+        tag="${{ github.event.inputs.tag }}"
+        echo "branch=${branch}" >> $GITHUB_ENV
+        echo "tag=${tag:-$branch}" >> $GITHUB_ENV
+
+    - name: Check out cloud-provider-openstack code
+      uses: actions/checkout@v7
+      with:
+        repository: easystack/cloud-provider-openstack
+        ref: ${{ env.branch }}
+        token: ${{ secrets.KPULL }}
+        path: ${{ env.PROJECT }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Login to Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ env.REGISTRY_NAME }}
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASS }}
+
+    - name: Docker Image(multiarch) Build And Push
+      run: |
+        cd ${{ env.PROJECT }}
+        docker buildx build \
+          --platform linux/arm64,linux/amd64 \
+          --provenance false --sbom false \
+          --target ${{ matrix.target }} \
+          --build-arg VERSION=${{ env.tag }} \
+          --output "type=image,push=true" \
+          --tag ${{ env.REGISTRY_NAME }}/multiarch/${{ matrix.image }}:${{ env.tag }} \
+          --file Dockerfile .

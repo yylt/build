@@ -160,6 +160,8 @@ docker buildx build \
 
 > 注：`ingress/`、`kata-image/` 子目录下另有各自的 Dockerfile（如 `ingress/Dockerfile-nginx`、`kata-image/5.15.63/*/Dockerfile.in`），分别服务于自定义 ingress 与 Kata 容器构建体系，此处不展开。
 
+> 注：`.github/workflows/cloud-provider-openstack.yaml` 不在本仓库维护 Dockerfile，而是用 `KPULL` 检出 `easystack/cloud-provider-openstack` 源码后复用其上游 Dockerfile，按 `--target` 以 matrix 方式构建 `openstack-cloud-controller-manager`、`cinder-csi-plugin`、`keystone-auth`（上游 target 为 `k8s-keystone-auth`）三个镜像，推送到 `${MY_HUB_NAME}/multiarch/<image>`；仅手动触发，`branch` 指定源码分支/tag（默认 1.35-es），`tag` 指定镜像 tag（默认与 branch 相同）。原 `keystone-auth.yaml` 与 `Dockerfile-keystone-auth` 已由该工作流取代并删除。
+
 # 如何新增构建组件
 
 新增一个镜像构建组件通常只需两步：**编写 Dockerfile** 与 **编写对应工作流**。
